@@ -23,6 +23,8 @@ public final class HomeGridLayout extends ViewGroup {
         void onEmptyCellLongPress(int col, int row);
         void onItemMoved(View child, int newCol, int newRow);
         void onItemRemoveRequested(View child);
+        /** Fired when a long-press on an occupant ends without the finger having actually dragged it. */
+        void onItemLongPress(View child);
     }
 
     private final int columns;
@@ -30,9 +32,12 @@ public final class HomeGridLayout extends ViewGroup {
     private final GestureDetector gestureDetector;
     private Callbacks callbacks;
 
+    private final int touchSlop;
     private int cellSize;
     private View draggingView;
     private float dragOffsetX, dragOffsetY;
+    private float dragStartRawX, dragStartRawY;
+    private boolean dragMoved;
 
     public HomeGridLayout(Context context, int columns, int rows) {
         super(context);
@@ -46,6 +51,7 @@ public final class HomeGridLayout extends ViewGroup {
         });
         gestureDetector.setIsLongpressEnabled(true);
         setChildrenDrawingOrderEnabled(true);
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
     }
 
     public void setCallbacks(Callbacks callbacks) {
@@ -66,6 +72,12 @@ public final class HomeGridLayout extends ViewGroup {
 
     public GridLayoutParams gridParams(int col, int row, int colSpan, int rowSpan) {
         return new GridLayoutParams(col, row, colSpan, rowSpan);
+    }
+
+    /** Applies a new cell placement/span to an existing occupant (e.g. after a resize) and re-lays it out. */
+    public void updateViewParams(View child, GridLayoutParams params) {
+        child.setLayoutParams(params);
+        requestLayout();
     }
 
     public boolean isAreaFree(int col, int row, int colSpan, int rowSpan, View ignore) {
@@ -101,6 +113,9 @@ public final class HomeGridLayout extends ViewGroup {
             return;
         }
         draggingView = child;
+        dragMoved = false;
+        dragStartRawX = e.getRawX();
+        dragStartRawY = e.getRawY();
         dragOffsetX = e.getX() - child.getLeft();
         dragOffsetY = e.getY() - child.getTop();
         child.setAlpha(0.75f);
@@ -119,6 +134,11 @@ public final class HomeGridLayout extends ViewGroup {
         if (draggingView != null) {
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_MOVE: {
+                    if (!dragMoved) {
+                        float dx = ev.getRawX() - dragStartRawX;
+                        float dy = ev.getRawY() - dragStartRawY;
+                        if (dx * dx + dy * dy > touchSlop * touchSlop) dragMoved = true;
+                    }
                     int newLeft = (int) (ev.getX() - dragOffsetX);
                     int newTop = (int) (ev.getY() - dragOffsetY);
                     GridLayoutParams lp = (GridLayoutParams) draggingView.getLayoutParams();
@@ -132,6 +152,13 @@ public final class HomeGridLayout extends ViewGroup {
                     View dropped = draggingView;
                     draggingView = null;
                     dropped.setAlpha(1f);
+
+                    if (!dragMoved) {
+                        requestLayout();
+                        if (callbacks != null) callbacks.onItemLongPress(dropped);
+                        return true;
+                    }
+
                     GridLayoutParams lp = (GridLayoutParams) dropped.getLayoutParams();
 
                     boolean draggedOffTop = dropped.getTop() + dropped.getHeight() / 2f < -cellSize * 0.4f;

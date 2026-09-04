@@ -1,6 +1,8 @@
 package com.piko.launcher.util;
 
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -11,6 +13,7 @@ import android.widget.Toast;
 
 import com.piko.launcher.R;
 import com.piko.launcher.core.AppInfo;
+import com.piko.launcher.core.Prefs;
 
 /**
  * Every outward-facing Intent Piko fires lives here: app launch/management,
@@ -135,6 +138,26 @@ public final class IntentUtil {
         } catch (PackageManager.NameNotFoundException e) {
             return false;
         }
+    }
+
+    /** Opens the user's chosen engine (Google or Brave) with the query pre-filled. */
+    public static void webSearch(Context context, String engine, String query) {
+        String base = Prefs.SEARCH_ENGINE_BRAVE.equals(engine)
+                ? "https://search.brave.com/search?q="
+                : "https://www.google.com/search?q=";
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(base + Uri.encode(query)));
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(context, R.string.no_results, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public static void copyToClipboard(Context context, String label, String text) {
+        ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm != null) cm.setPrimaryClip(ClipData.newPlainText(label, text));
+        Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show();
     }
 
     private static String onlyDigits(String phoneNumber) {

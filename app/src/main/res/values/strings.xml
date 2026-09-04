@@ -43,4 +43,17 @@
     <string name="permission_contacts_denied">Contacts permission is needed to add a quick contact</string>
     <string name="permission_call_denied">Call permission denied, opening dialer instead</string>
     <string name="whatsapp_not_installed">WhatsApp is not installed</string>
+
+    <string name="copied_to_clipboard">Copied</string>
+    <string name="copy_name">Copy name</string>
+    <string name="copy_number">Copy number</string>
+    <string name="search_the_web">Search the web for \"%1$s\"</string>
+    <string name="settings_search_engine">Web search engine</string>
+    <string name="menu_remove_from_home">Remove from home</string>
+    <string name="menu_resize_widget">Resize widget</string>
+    <string name="confirm_remove_favorite_title">Remove favorite?</string>
+    <string name="confirm_remove_favorite_message">Remove %1$s from your favorites row?</string>
+    <string name="confirm_remove_home_item_title">Remove from home?</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_cancel">Cancel</string>
 </resources>

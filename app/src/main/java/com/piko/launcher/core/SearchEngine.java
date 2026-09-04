@@ -81,8 +81,15 @@ public final class SearchEngine {
                 scored.add(new ScoredResult(SearchResult.forApp(app), s));
             }
         }
+        String queryDigits = query.replaceAll("[^0-9]", "");
         for (ContactInfo contact : contactsSource) {
             int s = score(contact.nameLower, query);
+            if (s == NO_MATCH && !queryDigits.isEmpty()) {
+                String numberDigits = contact.phoneNumber.replaceAll("[^0-9]", "");
+                if (!numberDigits.isEmpty() && numberDigits.contains(queryDigits)) {
+                    s = SCORE_CONTAINS;
+                }
+            }
             if (s != NO_MATCH) {
                 s += learningStore.boostFor(query, contactKey(contact)) * LEARNING_BOOST_WEIGHT;
                 scored.add(new ScoredResult(SearchResult.forContact(contact), s - SCORE_CONTACT_BIAS));

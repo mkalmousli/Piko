@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import com.piko.launcher.R;
@@ -18,10 +19,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Renders the unified search list: app rows (tap to launch) interleaved
- * with contact rows (four inline action buttons — call, SMS, WhatsApp
- * message, WhatsApp call — since there's no reliable way to know in advance
- * which of those a given number actually supports).
+ * Renders the unified search list: app rows (tap to launch), contact rows
+ * (four inline action buttons — call, SMS, WhatsApp message, WhatsApp call —
+ * plus a long-press menu to copy the name/number), an inline calculator
+ * result row, and a "search the web" fallback row.
  */
 public final class SearchResultAdapter extends BaseAdapter {
 
@@ -30,6 +31,8 @@ public final class SearchResultAdapter extends BaseAdapter {
 
         /** Fired for any action taken on a contact row, so the caller can teach the search ranker. */
         void onContactActed(ContactInfo contact);
+
+        void onWebSearch(String query);
     }
 
     private final Context context;
@@ -71,7 +74,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     @Override
     public int getViewTypeCount() {
-        return 2;
+        return 4;
     }
 
     @Override
@@ -81,16 +84,23 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     @Override
     public boolean isEnabled(int position) {
-        return items.get(position).type == SearchResult.TYPE_APP;
+        int type = items.get(position).type;
+        return type == SearchResult.TYPE_APP || type == SearchResult.TYPE_CALC || type == SearchResult.TYPE_WEB;
     }
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         SearchResult result = items.get(position);
-        if (result.type == SearchResult.TYPE_APP) {
-            return getAppView(result, convertView, parent);
+        switch (result.type) {
+            case SearchResult.TYPE_APP:
+                return getAppView(result, convertView, parent);
+            case SearchResult.TYPE_CALC:
+                return getCalcView(result, convertView, parent);
+            case SearchResult.TYPE_WEB:
+                return getWebView(result, convertView, parent);
+            default:
+                return getContactView(result, convertView, parent);
         }
-        return getContactView(result, convertView, parent);
     }
 
     private View getAppView(SearchResult result, View convertView, ViewGroup parent) {
@@ -110,6 +120,38 @@ public final class SearchResultAdapter extends BaseAdapter {
         return view;
     }
 
+    private View getCalcView(SearchResult result, View convertView, ViewGroup parent) {
+        View view = convertView;
+        CalcHolder holder;
+        if (view == null || view.getTag() == null || !(view.getTag() instanceof CalcHolder)) {
+            view = LayoutInflater.from(context).inflate(R.layout.list_item_calc, parent, false);
+            holder = new CalcHolder();
+            holder.expression = view.findViewById(R.id.expression);
+            holder.result = view.findViewById(R.id.result);
+            view.setTag(holder);
+        } else {
+            holder = (CalcHolder) view.getTag();
+        }
+        holder.expression.setText(result.text);
+        holder.result.setText(result.value == null ? "…" : result.value);
+        return view;
+    }
+
+    private View getWebView(SearchResult result, View convertView, ViewGroup parent) {
+        View view = convertView;
+        WebHolder holder;
+        if (view == null || view.getTag() == null || !(view.getTag() instanceof WebHolder)) {
+            view = LayoutInflater.from(context).inflate(R.layout.list_item_web, parent, false);
+            holder = new WebHolder();
+            holder.label = view.findViewById(R.id.label);
+            view.setTag(holder);
+        } else {
+            holder = (WebHolder) view.getTag();
+        }
+        holder.label.setText(context.getString(R.string.search_the_web, result.text));
+        return view;
+    }
+
     private View getContactView(SearchResult result, View convertView, ViewGroup parent) {
         View view = convertView;
         ContactHolder holder;
@@ -118,6 +160,7 @@ public final class SearchResultAdapter extends BaseAdapter {
             holder = new ContactHolder();
             holder.avatar = view.findViewById(R.id.avatar);
             holder.label = view.findViewById(R.id.label);
+            holder.number = view.findViewById(R.id.number);
             holder.btnCall = view.findViewById(R.id.btn_call);
             holder.btnSms = view.findViewById(R.id.btn_sms);
             holder.btnWaMessage = view.findViewById(R.id.btn_wa_message);
@@ -129,6 +172,8 @@ public final class SearchResultAdapter extends BaseAdapter {
 
         ContactInfo contact = result.contact;
         holder.label.setText(contact.name);
+        holder.number.setText(contact.phoneNumber);
+        holder.number.setVisibility(contact.phoneNumber.isEmpty() ? View.GONE : View.VISIBLE);
         holder.avatar.setText(contact.name.isEmpty() ? "?" : contact.name.substring(0, 1).toUpperCase());
         holder.btnCall.setOnClickListener(v -> {
             listener.onCall(contact.phoneNumber);
@@ -146,7 +191,28 @@ public final class SearchResultAdapter extends BaseAdapter {
             IntentUtil.whatsAppCall(context, contact.phoneNumber, false);
             listener.onContactActed(contact);
         });
+        view.setOnLongClickListener(v -> {
+            showContactContextMenu(v, contact);
+            return true;
+        });
         return view;
+    }
+
+    private void showContactContextMenu(View anchor, ContactInfo contact) {
+        PopupMenu menu = new PopupMenu(context, anchor);
+        menu.getMenu().add(0, 1, 0, R.string.copy_name);
+        menu.getMenu().add(0, 2, 1, R.string.copy_number);
+        menu.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                IntentUtil.copyToClipboard(context, "name", contact.name);
+                return true;
+            } else if (item.getItemId() == 2) {
+                IntentUtil.copyToClipboard(context, "number", contact.phoneNumber);
+                return true;
+            }
+            return false;
+        });
+        menu.show();
     }
 
     private static final class AppHolder {
@@ -154,9 +220,19 @@ public final class SearchResultAdapter extends BaseAdapter {
         TextView label;
     }
 
+    private static final class CalcHolder {
+        TextView expression;
+        TextView result;
+    }
+
+    private static final class WebHolder {
+        TextView label;
+    }
+
     private static final class ContactHolder {
         TextView avatar;
         TextView label;
+        TextView number;
         View btnCall, btnSms, btnWaMessage, btnWaCall;
     }
 }

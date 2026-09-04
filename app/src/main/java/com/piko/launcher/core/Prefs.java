@@ -19,6 +19,10 @@ public final class Prefs {
     private static final String KEY_FIRST_RUN = "first_run_done";
     private static final String KEY_LAYOUT_REVISION = "layout_revision";
     private static final String KEY_CONTACTS_PERMISSION_ASKED = "contacts_permission_asked";
+    private static final String KEY_SEARCH_ENGINE = "web_search_engine";
+
+    public static final String SEARCH_ENGINE_GOOGLE = "google";
+    public static final String SEARCH_ENGINE_BRAVE = "brave";
 
     public static final int DEFAULT_COLUMNS = 5;
     public static final int DEFAULT_ROWS = 6;
@@ -94,6 +98,14 @@ public final class Prefs {
 
     public void setContactsPermissionAsked(boolean value) {
         sp.edit().putBoolean(KEY_CONTACTS_PERMISSION_ASKED, value).apply();
+    }
+
+    public String webSearchEngine() {
+        return sp.getString(KEY_SEARCH_ENGINE, SEARCH_ENGINE_GOOGLE);
+    }
+
+    public void setWebSearchEngine(String engine) {
+        sp.edit().putString(KEY_SEARCH_ENGINE, engine).apply();
     }
 
     public boolean isFirstRunDone() {

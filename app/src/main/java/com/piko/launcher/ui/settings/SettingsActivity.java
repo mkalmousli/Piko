@@ -78,6 +78,14 @@ public final class SettingsActivity extends Activity {
         directCallSwitch.setOnCheckedChangeListener((CompoundButton b, boolean checked) ->
                 prefs.setDirectCall(checked));
 
+        TextView searchEngineText = findViewById(R.id.text_search_engine);
+        refreshSearchEngineLabel(searchEngineText);
+        searchEngineText.setOnClickListener(v -> {
+            boolean nowBrave = !Prefs.SEARCH_ENGINE_BRAVE.equals(prefs.webSearchEngine());
+            prefs.setWebSearchEngine(nowBrave ? Prefs.SEARCH_ENGINE_BRAVE : Prefs.SEARCH_ENGINE_GOOGLE);
+            refreshSearchEngineLabel(searchEngineText);
+        });
+
         findViewById(R.id.btn_reset_layout).setOnClickListener(v -> confirmResetLayout());
         findViewById(R.id.btn_add_shortcut).setOnClickListener(v -> startAddShortcut());
     }
@@ -86,6 +94,11 @@ public final class SettingsActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshShortcutsUi();
+    }
+
+    private void refreshSearchEngineLabel(TextView label) {
+        boolean brave = Prefs.SEARCH_ENGINE_BRAVE.equals(prefs.webSearchEngine());
+        label.setText(brave ? "Brave" : "Google");
     }
 
     private interface IntConsumer {
