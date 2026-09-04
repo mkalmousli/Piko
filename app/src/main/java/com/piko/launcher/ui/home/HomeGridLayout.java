@@ -147,8 +147,17 @@ public final class HomeGridLayout extends ViewGroup {
                     draggingView.layout(newLeft, newTop, newLeft + width, newTop + height);
                     return true;
                 }
-                case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL: {
+                    // An ancestor (the page swiper) hijacked the gesture — e.g. a slow swipe that
+                    // started over an icon before crossing its own drag threshold. Just drop the
+                    // in-progress drag silently; a hijacked gesture is never a deliberate long-press.
+                    View dropped = draggingView;
+                    draggingView = null;
+                    dropped.setAlpha(1f);
+                    requestLayout();
+                    return true;
+                }
+                case MotionEvent.ACTION_UP: {
                     View dropped = draggingView;
                     draggingView = null;
                     dropped.setAlpha(1f);
