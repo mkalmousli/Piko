@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Piko</string>
+    <string name="search_hint">Search apps…</string>
+    <string name="no_results">No apps found</string>
+    <string name="page_search">Search</string>
+    <string name="page_home">Home</string>
+
+    <string name="settings_title">Piko Settings</string>
+    <string name="settings_layout">Layout</string>
+    <string name="settings_columns">Grid columns</string>
+    <string name="settings_rows">Grid rows</string>
+    <string name="settings_pages">Home pages</string>
+    <string name="settings_default_page">Open on launch</string>
+    <string name="settings_behaviour">Behaviour</string>
+    <string name="settings_direct_call">Call directly (skip dialer)</string>
+    <string name="settings_shortcuts">Quick contacts</string>
+    <string name="settings_add_shortcut">Add contact shortcut</string>
+    <string name="settings_no_shortcuts">No quick contacts yet. Tap + to add one.</string>
+    <string name="settings_reset_layout">Reset home layout</string>
+    <string name="settings_about">About Piko</string>
+
+    <string name="action_call">Call</string>
+    <string name="action_message">Message</string>
+    <string name="action_whatsapp_message">WhatsApp message</string>
+    <string name="action_whatsapp_call">WhatsApp call</string>
+
+    <string name="menu_app_info">App info</string>
+    <string name="menu_uninstall">Uninstall</string>
+    <string name="menu_add_to_home">Add to home</string>
+    <string name="menu_add_to_favorites">Add to favorites</string>
+    <string name="menu_remove_from_favorites">Remove from favorites</string>
+
+    <string name="widget_search_hint">Search widgets…</string>
+    <string name="widget_none_found">No widgets found</string>
+    <string name="widget_add_failed">Couldn\'t add that widget</string>
+
+    <string name="menu_add_widget">Add widget</string>
+    <string name="menu_add_app">Add app</string>
+    <string name="menu_remove">Remove</string>
+    <string name="menu_settings">Piko settings</string>
+
+    <string name="permission_contacts_denied">Contacts permission is needed to add a quick contact</string>
+    <string name="permission_call_denied">Call permission denied, opening dialer instead</string>
+    <string name="whatsapp_not_installed">WhatsApp is not installed</string>
+</resources>

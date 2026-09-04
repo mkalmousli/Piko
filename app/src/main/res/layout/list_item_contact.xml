@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingLeft="4dp"
+    android:paddingRight="8dp">
+
+    <TextView
+        android:id="@+id/avatar"
+        android:layout_width="@dimen/icon_size"
+        android:layout_height="@dimen/icon_size"
+        android:layout_margin="3dp"
+        android:background="@drawable/bg_shortcut_chip"
+        android:gravity="center"
+        android:textColor="@color/piko_text_primary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:layout_marginEnd="4dp"
+        android:textColor="@color/piko_text_primary"
+        android:textSize="14sp"
+        android:singleLine="true"
+        android:ellipsize="end" />
+
+    <ImageButton
+        android:id="@+id/btn_call"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="6dp"
+        android:background="@drawable/bg_pressable"
+        android:src="@drawable/ic_call" />
+
+    <ImageButton
+        android:id="@+id/btn_sms"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="6dp"
+        android:background="@drawable/bg_pressable"
+        android:src="@drawable/ic_sms" />
+
+    <ImageButton
+        android:id="@+id/btn_wa_message"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="6dp"
+        android:background="@drawable/bg_pressable"
+        android:src="@drawable/ic_message" />
+
+    <ImageButton
+        android:id="@+id/btn_wa_call"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:padding="6dp"
+        android:background="@drawable/bg_pressable"
+        android:src="@drawable/ic_wa_call" />
+
+</LinearLayout>

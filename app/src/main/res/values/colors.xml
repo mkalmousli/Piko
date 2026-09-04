@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="piko_bg">#0E0F12</color>
+    <color name="piko_bg_scrim">#B0000000</color>
+    <color name="piko_surface">#1B1D22</color>
+    <color name="piko_surface_alt">#25282F</color>
+    <color name="piko_accent">#7C9CFF</color>
+    <color name="piko_text_primary">#F5F6F8</color>
+    <color name="piko_text_secondary">#9AA0AC</color>
+    <color name="piko_text_hint">#5B606B</color>
+    <color name="piko_divider">#2A2D34</color>
+    <color name="piko_transparent">#00000000</color>
+    <color name="piko_call">#4CD787</color>
+    <color name="piko_whatsapp">#25D366</color>
+    <color name="piko_danger">#FF6B6B</color>
+</resources>

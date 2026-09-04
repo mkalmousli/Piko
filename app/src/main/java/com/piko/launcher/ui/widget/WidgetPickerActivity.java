@@ -1,0 +1,163 @@
+package com.piko.launcher.ui.widget;
+
+import android.app.Activity;
+import android.appwidget.AppWidgetManager;
+import android.appwidget.AppWidgetProviderInfo;
+import android.content.ComponentName;
+import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.widget.EditText;
+import android.widget.ExpandableListView;
+import android.widget.TextView;
+
+import com.piko.launcher.R;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+
+/**
+ * Custom "add widget" picker: searchable, grouped by app (expandable), each
+ * widget shown with a live preview. Replaces the stock system picker so we
+ * control the whole bind flow ourselves (see MainActivity's widget methods).
+ */
+public final class WidgetPickerActivity extends Activity {
+
+    public static final String EXTRA_PROVIDER = "extra_provider";
+
+    private ExpandableListView list;
+    private WidgetPickerAdapter adapter;
+    private TextView emptyText;
+    private List<WidgetProviderGroup> allGroups = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_widget_picker);
+
+        EditText searchInput = findViewById(R.id.widget_search_input);
+        list = findViewById(R.id.widget_list);
+        emptyText = findViewById(R.id.widget_empty_text);
+
+        adapter = new WidgetPickerAdapter(this);
+        list.setAdapter(adapter);
+        list.setOnChildClickListener((parent, v, groupPosition, childPosition, id) -> {
+            AppWidgetProviderInfo info = adapter.getChild(groupPosition, childPosition);
+            Intent result = new Intent();
+            result.putExtra(EXTRA_PROVIDER, info.provider);
+            setResult(RESULT_OK, result);
+            finish();
+            return true;
+        });
+
+        searchInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                applyFilter(s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        loadGroupsAsync();
+    }
+
+    private void loadGroupsAsync() {
+        Executors.newSingleThreadExecutor().execute(() -> {
+            List<WidgetProviderGroup> groups = buildGroups();
+            runOnUiThread(() -> {
+                allGroups = groups;
+                applyFilter("");
+            });
+        });
+    }
+
+    private List<WidgetProviderGroup> buildGroups() {
+        PackageManager pm = getPackageManager();
+        AppWidgetManager awm = AppWidgetManager.getInstance(this);
+        Map<String, WidgetProviderGroup> byPackage = new LinkedHashMap<>();
+
+        for (AppWidgetProviderInfo info : awm.getInstalledProviders()) {
+            String packageName = info.provider.getPackageName();
+            WidgetProviderGroup group = byPackage.get(packageName);
+            if (group == null) {
+                group = new WidgetProviderGroup(packageName, appLabel(pm, packageName), appIcon(pm, packageName));
+                byPackage.put(packageName, group);
+            }
+            group.widgets.add(info);
+        }
+
+        List<WidgetProviderGroup> groups = new ArrayList<>(byPackage.values());
+        Collections.sort(groups, Comparator.comparing(g -> g.appLabel.toLowerCase()));
+        for (WidgetProviderGroup group : groups) {
+            Collections.sort(group.widgets, Comparator.comparing(
+                    (AppWidgetProviderInfo w) -> w.loadLabel(pm).toLowerCase()));
+        }
+        return groups;
+    }
+
+    private String appLabel(PackageManager pm, String packageName) {
+        try {
+            ApplicationInfo info = pm.getApplicationInfo(packageName, 0);
+            return pm.getApplicationLabel(info).toString();
+        } catch (PackageManager.NameNotFoundException e) {
+            return packageName;
+        }
+    }
+
+    private Drawable appIcon(PackageManager pm, String packageName) {
+        try {
+            return pm.getApplicationIcon(packageName);
+        } catch (PackageManager.NameNotFoundException e) {
+            return getDrawable(R.drawable.ic_placeholder_app);
+        }
+    }
+
+    private void applyFilter(String rawQuery) {
+        String query = rawQuery.trim().toLowerCase();
+        boolean searching = !query.isEmpty();
+
+        List<WidgetProviderGroup> filtered = new ArrayList<>();
+        for (WidgetProviderGroup group : allGroups) {
+            if (!searching) {
+                filtered.add(group);
+                continue;
+            }
+            boolean groupMatches = group.appLabel.toLowerCase().contains(query);
+            if (groupMatches) {
+                filtered.add(group);
+                continue;
+            }
+            WidgetProviderGroup partial = new WidgetProviderGroup(group.packageName, group.appLabel, group.appIcon);
+            for (AppWidgetProviderInfo info : group.widgets) {
+                if (info.loadLabel(getPackageManager()).toLowerCase().contains(query)) {
+                    partial.widgets.add(info);
+                }
+            }
+            if (!partial.widgets.isEmpty()) filtered.add(partial);
+        }
+
+        adapter.submit(filtered);
+        emptyText.setVisibility(filtered.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
+        list.setVisibility(filtered.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+
+        if (searching) {
+            for (int i = 0; i < filtered.size(); i++) list.expandGroup(i);
+        }
+    }
+}

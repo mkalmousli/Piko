@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="grid_cell_min">64dp</dimen>
+    <dimen name="icon_size">40dp</dimen>
+    <dimen name="icon_size_dock">32dp</dimen>
+    <dimen name="search_bar_height">46dp</dimen>
+    <dimen name="spacing_small">4dp</dimen>
+    <dimen name="spacing_medium">10dp</dimen>
+    <dimen name="spacing_large">18dp</dimen>
+    <dimen name="corner_radius">14dp</dimen>
+</resources>
