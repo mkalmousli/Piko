@@ -3,6 +3,10 @@ package com.piko.launcher.core;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+
 /**
  * Single access point for every Piko preference. Keeping keys and defaults
  * here avoids magic strings scattered across the UI layer.
@@ -19,10 +23,8 @@ public final class Prefs {
     private static final String KEY_FIRST_RUN = "first_run_done";
     private static final String KEY_LAYOUT_REVISION = "layout_revision";
     private static final String KEY_CONTACTS_PERMISSION_ASKED = "contacts_permission_asked";
-    private static final String KEY_SEARCH_ENGINE = "web_search_engine";
-
-    public static final String SEARCH_ENGINE_GOOGLE = "google";
-    public static final String SEARCH_ENGINE_BRAVE = "brave";
+    /** Comma-separated engine ids in user-chosen order, enabled ones prefixed unmarked, disabled ones with a "-" prefix. */
+    private static final String KEY_SEARCH_ENGINE_ORDER = "web_search_engine_order_v2";
 
     public static final int DEFAULT_COLUMNS = 5;
     public static final int DEFAULT_ROWS = 6;
@@ -100,12 +102,62 @@ public final class Prefs {
         sp.edit().putBoolean(KEY_CONTACTS_PERMISSION_ASKED, value).apply();
     }
 
-    public String webSearchEngine() {
-        return sp.getString(KEY_SEARCH_ENGINE, SEARCH_ENGINE_GOOGLE);
+    /** Every catalog engine id, in the user's chosen order (defaults to catalog order if never touched). */
+    public List<String> searchEngineOrder() {
+        String raw = sp.getString(KEY_SEARCH_ENGINE_ORDER, null);
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        if (raw != null && !raw.isEmpty()) {
+            for (String token : raw.split(",")) {
+                String id = token.startsWith("-") ? token.substring(1) : token;
+                if (!id.isEmpty()) ids.add(id);
+            }
+        }
+        for (WebSearchEngines.Engine e : WebSearchEngines.ALL) ids.add(e.id); // append any new catalog entries
+        return new ArrayList<>(ids);
     }
 
-    public void setWebSearchEngine(String engine) {
-        sp.edit().putString(KEY_SEARCH_ENGINE, engine).apply();
+    /** Subset of {@link #searchEngineOrder()} that the user left enabled, still in order. */
+    public List<String> enabledSearchEngines() {
+        String raw = sp.getString(KEY_SEARCH_ENGINE_ORDER, null);
+        List<String> order = searchEngineOrder();
+        if (raw == null || raw.isEmpty()) {
+            List<String> result = new ArrayList<>();
+            if (!order.isEmpty()) result.add(order.get(0)); // fresh install: only the first engine enabled
+            return result;
+        }
+        LinkedHashSet<String> disabled = new LinkedHashSet<>();
+        for (String token : raw.split(",")) {
+            if (token.startsWith("-")) disabled.add(token.substring(1));
+        }
+        List<String> result = new ArrayList<>();
+        for (String id : order) if (!disabled.contains(id)) result.add(id);
+        return result;
+    }
+
+    public boolean isSearchEngineEnabled(String id) {
+        return enabledSearchEngines().contains(id);
+    }
+
+    public void setSearchEngineEnabled(String id, boolean enabled) {
+        List<String> order = searchEngineOrder();
+        List<String> enabledNow = enabledSearchEngines();
+        LinkedHashSet<String> enabledSet = new LinkedHashSet<>(enabledNow);
+        if (enabled) enabledSet.add(id); else enabledSet.remove(id);
+        saveEngineState(order, enabledSet);
+    }
+
+    public void setSearchEngineOrder(List<String> newOrder) {
+        saveEngineState(newOrder, new LinkedHashSet<>(enabledSearchEngines()));
+    }
+
+    private void saveEngineState(List<String> order, LinkedHashSet<String> enabledSet) {
+        StringBuilder sb = new StringBuilder();
+        for (String id : order) {
+            if (sb.length() > 0) sb.append(",");
+            if (!enabledSet.contains(id)) sb.append("-");
+            sb.append(id);
+        }
+        sp.edit().putString(KEY_SEARCH_ENGINE_ORDER, sb.toString()).apply();
     }
 
     public boolean isFirstRunDone() {

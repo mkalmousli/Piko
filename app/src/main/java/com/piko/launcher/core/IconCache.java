@@ -3,6 +3,7 @@ package com.piko.launcher.core;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
@@ -44,7 +45,7 @@ public final class IconCache {
     }
 
     public void load(AppInfo app, ImageView target, int sizePx) {
-        String key = app.key() + "@" + sizePx;
+        String key = app.key() + "@" + sizePx + (app.customIconPath != null ? "#" + app.customIconPath : "");
         target.setTag(key);
 
         Bitmap cached = memoryCache.get(key);
@@ -71,6 +72,10 @@ public final class IconCache {
     }
 
     private Bitmap decode(AppInfo app, int sizePx) {
+        if (app.customIconPath != null) {
+            Bitmap custom = decodeCustomIcon(app.customIconPath, sizePx);
+            if (custom != null) return custom;
+        }
         try {
             PackageManager pm = appContext.getPackageManager();
             Drawable drawable = pm.getActivityIcon(new android.content.ComponentName(app.packageName, app.activityName));
@@ -78,6 +83,12 @@ public final class IconCache {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private Bitmap decodeCustomIcon(String path, int sizePx) {
+        Bitmap decoded = BitmapFactory.decodeFile(path);
+        if (decoded == null) return null;
+        return Bitmap.createScaledBitmap(decoded, sizePx, sizePx, true);
     }
 
     private Bitmap toBitmap(Drawable drawable, int sizePx) {

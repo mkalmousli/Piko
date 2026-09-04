@@ -23,6 +23,18 @@
             <data android:mimeType="vnd.android.cursor.dir/phone_v2" />
         </intent>
         <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="vnd.android.cursor.item/contact" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DELETE" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.UNINSTALL_PACKAGE" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
             <action android:name="android.appwidget.action.APPWIDGET_PICK" />
         </intent>
         <intent>
@@ -77,6 +89,18 @@
         <activity
             android:name=".ui.widget.WidgetPickerActivity"
             android:label="@string/menu_add_widget"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.BigNumberActivity"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:screenOrientation="portrait"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.settings.AppEditActivity"
+            android:label="@string/menu_edit_app"
             android:screenOrientation="portrait"
             android:exported="false" />
 

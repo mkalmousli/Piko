@@ -28,8 +28,6 @@
     <string name="menu_app_info">App info</string>
     <string name="menu_uninstall">Uninstall</string>
     <string name="menu_add_to_home">Add to home</string>
-    <string name="menu_add_to_favorites">Add to favorites</string>
-    <string name="menu_remove_from_favorites">Remove from favorites</string>
 
     <string name="widget_search_hint">Search widgets…</string>
     <string name="widget_none_found">No widgets found</string>
@@ -45,15 +43,22 @@
     <string name="whatsapp_not_installed">WhatsApp is not installed</string>
 
     <string name="copied_to_clipboard">Copied</string>
-    <string name="copy_name">Copy name</string>
-    <string name="copy_number">Copy number</string>
     <string name="search_the_web">Search the web for \"%1$s\"</string>
-    <string name="settings_search_engine">Web search engine</string>
     <string name="menu_remove_from_home">Remove from home</string>
     <string name="menu_resize_widget">Resize widget</string>
-    <string name="confirm_remove_favorite_title">Remove favorite?</string>
-    <string name="confirm_remove_favorite_message">Remove %1$s from your favorites row?</string>
     <string name="confirm_remove_home_item_title">Remove from home?</string>
     <string name="action_remove">Remove</string>
     <string name="action_cancel">Cancel</string>
+
+    <string name="menu_edit_app">Edit app</string>
+    <string name="change_icon">Change icon</string>
+    <string name="app_name_label">Name</string>
+    <string name="app_tags_label">Search tags</string>
+    <string name="app_tags_hint">Comma-separated, e.g. "photos, camera"</string>
+    <string name="action_save">Save</string>
+    <string name="action_reset">Reset</string>
+
+    <string name="settings_search_engines">Web search engines</string>
+    <string name="settings_search_engines_hint">Enable and reorder — shown left-to-right on the search-the-web row.</string>
+    <string name="uninstall_failed">Couldn\'t open the uninstall screen for this app</string>
 </resources>

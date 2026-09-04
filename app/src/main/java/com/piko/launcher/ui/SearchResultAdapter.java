@@ -6,13 +6,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
-import android.widget.PopupMenu;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.piko.launcher.R;
 import com.piko.launcher.core.ContactInfo;
 import com.piko.launcher.core.IconCache;
+import com.piko.launcher.core.Prefs;
 import com.piko.launcher.core.SearchResult;
+import com.piko.launcher.core.WebSearchEngines;
 import com.piko.launcher.util.IntentUtil;
 
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ public final class SearchResultAdapter extends BaseAdapter {
         /** Fired for any action taken on a contact row, so the caller can teach the search ranker. */
         void onContactActed(ContactInfo contact);
 
-        void onWebSearch(String query);
+        void onWebSearch(String query, String engineId);
     }
 
     private final Context context;
@@ -40,6 +42,7 @@ public final class SearchResultAdapter extends BaseAdapter {
     private final int iconSizePx;
     private final Listener listener;
     private List<SearchResult> items = new ArrayList<>();
+    private String currentQuery = "";
 
     public SearchResultAdapter(Context context, Listener listener) {
         this.context = context;
@@ -48,8 +51,9 @@ public final class SearchResultAdapter extends BaseAdapter {
         this.iconSizePx = (int) (40 * context.getResources().getDisplayMetrics().density);
     }
 
-    public void submit(List<SearchResult> newItems) {
+    public void submit(List<SearchResult> newItems, String query) {
         this.items = newItems;
+        this.currentQuery = query == null ? "" : query;
         notifyDataSetChanged();
     }
 
@@ -115,7 +119,7 @@ public final class SearchResultAdapter extends BaseAdapter {
         } else {
             holder = (AppHolder) view.getTag();
         }
-        holder.label.setText(result.app.label);
+        holder.label.setText(TextHighlighter.highlight(context, result.app.label, currentQuery));
         iconCache.load(result.app, holder.icon, iconSizePx);
         return view;
     }
@@ -144,12 +148,34 @@ public final class SearchResultAdapter extends BaseAdapter {
             view = LayoutInflater.from(context).inflate(R.layout.list_item_web, parent, false);
             holder = new WebHolder();
             holder.label = view.findViewById(R.id.label);
+            holder.chips = view.findViewById(R.id.engine_chips);
             view.setTag(holder);
         } else {
             holder = (WebHolder) view.getTag();
         }
         holder.label.setText(context.getString(R.string.search_the_web, result.text));
+
+        holder.chips.removeAllViews();
+        List<String> engines = Prefs.get(context).enabledSearchEngines();
+        int chipSize = (int) (28 * context.getResources().getDisplayMetrics().density);
+        for (String engineId : engines) {
+            TextView chip = new TextView(context);
+            WebSearchEngines.Engine engine = WebSearchEngines.byId(engineId);
+            chip.setText(engine.label.substring(0, 1));
+            chip.setTextColor(0xFFFFFFFF);
+            chip.setBackgroundResource(R.drawable.bg_shortcut_chip);
+            chip.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(chipSize, chipSize);
+            lp.setMargins(dp(4), 0, 0, 0);
+            chip.setLayoutParams(lp);
+            chip.setOnClickListener(v -> listener.onWebSearch(result.text, engineId));
+            holder.chips.addView(chip);
+        }
         return view;
+    }
+
+    private int dp(int value) {
+        return (int) (value * context.getResources().getDisplayMetrics().density);
     }
 
     private View getContactView(SearchResult result, View convertView, ViewGroup parent) {
@@ -171,7 +197,7 @@ public final class SearchResultAdapter extends BaseAdapter {
         }
 
         ContactInfo contact = result.contact;
-        holder.label.setText(contact.name);
+        holder.label.setText(TextHighlighter.highlight(context, contact.name, currentQuery));
         holder.number.setText(contact.phoneNumber);
         holder.number.setVisibility(contact.phoneNumber.isEmpty() ? View.GONE : View.VISIBLE);
         holder.avatar.setText(contact.name.isEmpty() ? "?" : contact.name.substring(0, 1).toUpperCase());
@@ -191,28 +217,19 @@ public final class SearchResultAdapter extends BaseAdapter {
             IntentUtil.whatsAppCall(context, contact.phoneNumber, false);
             listener.onContactActed(contact);
         });
+        // Tapping the row (outside the action buttons/avatar) opens the contact's own detail page.
+        view.setOnClickListener(v -> {
+            IntentUtil.openContactInfo(context, contact.contactId);
+            listener.onContactActed(contact);
+        });
+        // A long press is a quick "grab the number" gesture — copy it straight away, no menu.
         view.setOnLongClickListener(v -> {
-            showContactContextMenu(v, contact);
+            IntentUtil.copyToClipboard(context, "number", contact.phoneNumber);
             return true;
         });
+        // The avatar is the one thing worth blowing up full-screen for reading a number aloud.
+        holder.avatar.setOnClickListener(v -> BigNumberActivity.start(context, contact.name, contact.phoneNumber));
         return view;
-    }
-
-    private void showContactContextMenu(View anchor, ContactInfo contact) {
-        PopupMenu menu = new PopupMenu(context, anchor);
-        menu.getMenu().add(0, 1, 0, R.string.copy_name);
-        menu.getMenu().add(0, 2, 1, R.string.copy_number);
-        menu.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == 1) {
-                IntentUtil.copyToClipboard(context, "name", contact.name);
-                return true;
-            } else if (item.getItemId() == 2) {
-                IntentUtil.copyToClipboard(context, "number", contact.phoneNumber);
-                return true;
-            }
-            return false;
-        });
-        menu.show();
     }
 
     private static final class AppHolder {
@@ -227,6 +244,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     private static final class WebHolder {
         TextView label;
+        LinearLayout chips;
     }
 
     private static final class ContactHolder {

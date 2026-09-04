@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -21,8 +22,10 @@ import com.piko.launcher.core.HomeLayoutStore;
 import com.piko.launcher.core.Prefs;
 import com.piko.launcher.core.ShortcutContact;
 import com.piko.launcher.core.ShortcutStore;
+import com.piko.launcher.core.WebSearchEngines;
 import com.piko.launcher.util.PermissionUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** Grid geometry, default page, call behaviour and the quick-contact dock — all in one flat screen. */
@@ -39,6 +42,7 @@ public final class SettingsActivity extends Activity {
     private TextView textColumns, textRows;
     private LinearLayout shortcutsContainer;
     private TextView textNoShortcuts;
+    private LinearLayout engineListContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,13 +82,8 @@ public final class SettingsActivity extends Activity {
         directCallSwitch.setOnCheckedChangeListener((CompoundButton b, boolean checked) ->
                 prefs.setDirectCall(checked));
 
-        TextView searchEngineText = findViewById(R.id.text_search_engine);
-        refreshSearchEngineLabel(searchEngineText);
-        searchEngineText.setOnClickListener(v -> {
-            boolean nowBrave = !Prefs.SEARCH_ENGINE_BRAVE.equals(prefs.webSearchEngine());
-            prefs.setWebSearchEngine(nowBrave ? Prefs.SEARCH_ENGINE_BRAVE : Prefs.SEARCH_ENGINE_GOOGLE);
-            refreshSearchEngineLabel(searchEngineText);
-        });
+        engineListContainer = findViewById(R.id.engine_list_container);
+        refreshEngineList();
 
         findViewById(R.id.btn_reset_layout).setOnClickListener(v -> confirmResetLayout());
         findViewById(R.id.btn_add_shortcut).setOnClickListener(v -> startAddShortcut());
@@ -96,9 +95,46 @@ public final class SettingsActivity extends Activity {
         refreshShortcutsUi();
     }
 
-    private void refreshSearchEngineLabel(TextView label) {
-        boolean brave = Prefs.SEARCH_ENGINE_BRAVE.equals(prefs.webSearchEngine());
-        label.setText(brave ? "Brave" : "Google");
+    private void refreshEngineList() {
+        engineListContainer.removeAllViews();
+        List<String> order = new ArrayList<>(prefs.searchEngineOrder());
+        List<String> enabled = prefs.enabledSearchEngines();
+
+        for (int i = 0; i < order.size(); i++) {
+            String id = order.get(i);
+            WebSearchEngines.Engine engine = WebSearchEngines.byId(id);
+            View row = LayoutInflater.from(this).inflate(R.layout.item_settings_search_engine, engineListContainer, false);
+            CheckBox checkBox = row.findViewById(R.id.checkbox);
+            TextView label = row.findViewById(R.id.label);
+            TextView up = row.findViewById(R.id.btn_up);
+            TextView down = row.findViewById(R.id.btn_down);
+
+            label.setText(engine.label);
+            checkBox.setChecked(enabled.contains(id));
+            checkBox.setOnCheckedChangeListener((b, checked) -> prefs.setSearchEngineEnabled(id, checked));
+
+            int index = i;
+            up.setEnabled(index > 0);
+            up.setAlpha(index > 0 ? 1f : 0.3f);
+            up.setOnClickListener(v -> {
+                List<String> newOrder = new ArrayList<>(order);
+                String moved = newOrder.remove(index);
+                newOrder.add(index - 1, moved);
+                prefs.setSearchEngineOrder(newOrder);
+                refreshEngineList();
+            });
+            down.setEnabled(index < order.size() - 1);
+            down.setAlpha(index < order.size() - 1 ? 1f : 0.3f);
+            down.setOnClickListener(v -> {
+                List<String> newOrder = new ArrayList<>(order);
+                String moved = newOrder.remove(index);
+                newOrder.add(index + 1, moved);
+                prefs.setSearchEngineOrder(newOrder);
+                refreshEngineList();
+            });
+
+            engineListContainer.addView(row);
+        }
     }
 
     private interface IntConsumer {

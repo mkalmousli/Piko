@@ -22,7 +22,6 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -33,10 +32,8 @@ import com.piko.launcher.core.AppIndexer;
 import com.piko.launcher.core.AppInfo;
 import com.piko.launcher.core.ContactIndexer;
 import com.piko.launcher.core.ContactInfo;
-import com.piko.launcher.core.FavoriteAppsStore;
 import com.piko.launcher.core.HomeItem;
 import com.piko.launcher.core.HomeLayoutStore;
-import com.piko.launcher.core.IconCache;
 import com.piko.launcher.core.Prefs;
 import com.piko.launcher.core.SearchEngine;
 import com.piko.launcher.core.SearchLearningStore;
@@ -77,7 +74,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private Prefs prefs;
     private UsageStore usageStore;
     private ShortcutStore shortcutStore;
-    private FavoriteAppsStore favoriteStore;
     private HomeLayoutStore layoutStore;
     private SearchEngine searchEngine;
     private WidgetHostController widgetHostController;
@@ -95,6 +91,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private final List<HomeGridLayout> gridPages = new ArrayList<>();
     private List<HomeItem> homeItems = new ArrayList<>();
+    private List<AppInfo> rawApps = new ArrayList<>();
     private List<AppInfo> currentApps = new ArrayList<>();
     private List<ContactInfo> currentContacts = new ArrayList<>();
     private List<SearchResult> currentResults = new ArrayList<>();
@@ -109,7 +106,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         prefs = Prefs.get(this);
         usageStore = UsageStore.get(this);
         shortcutStore = ShortcutStore.get(this);
-        favoriteStore = FavoriteAppsStore.get(this);
         layoutStore = HomeLayoutStore.get(this);
         searchEngine = new SearchEngine(usageStore, SearchLearningStore.get(this));
         widgetHostController = WidgetHostController.get(this);
@@ -187,8 +183,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             }
 
             @Override
-            public void onWebSearch(String query) {
-                IntentUtil.webSearch(MainActivity.this, prefs.webSearchEngine(), query);
+            public void onWebSearch(String query, String engineId) {
+                IntentUtil.webSearch(MainActivity.this, engineId, query);
             }
         });
         resultsList.setAdapter(searchAdapter);
@@ -223,7 +219,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (result.type == SearchResult.TYPE_APP) {
                 launchApp(result.app);
             } else if (result.type == SearchResult.TYPE_WEB) {
-                IntentUtil.webSearch(this, prefs.webSearchEngine(), result.text);
+                IntentUtil.webSearch(this, primaryEngine(), result.text);
             } else if (result.type == SearchResult.TYPE_CALC && result.value != null) {
                 IntentUtil.copyToClipboard(this, result.text, result.value);
             }
@@ -253,9 +249,15 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             doCall(best.contact.phoneNumber);
             searchEngine.recordChoice(searchInput.getText().toString(), SearchEngine.contactKey(best.contact));
         } else if (best.type == SearchResult.TYPE_WEB) {
-            IntentUtil.webSearch(this, prefs.webSearchEngine(), best.text);
+            IntentUtil.webSearch(this, primaryEngine(), best.text);
         }
         // TYPE_CALC: enter does nothing extra — tapping the row copies the value.
+    }
+
+    /** The first enabled engine, used when the user taps the web-search row itself rather than an engine chip. */
+    private String primaryEngine() {
+        List<String> enabled = prefs.enabledSearchEngines();
+        return enabled.isEmpty() ? "google" : enabled.get(0);
     }
 
     private HomeGridLayout createGrid(int pageId, int columns, int rows) {
@@ -377,13 +379,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         // Best match renders nearest the search bar: reverse so it lands last in a stackFromBottom list.
         List<SearchResult> display = new ArrayList<>(currentResults);
         Collections.reverse(display);
-        searchAdapter.submit(display);
+        searchAdapter.submit(display, searchInput.getText().toString());
 
         boolean hasResults = !currentResults.isEmpty();
         resultsList.setVisibility(!idle && hasResults ? View.VISIBLE : View.GONE);
         emptyText.setVisibility(!idle && !hasResults ? View.VISIBLE : View.GONE);
         idleWidgetArea.setVisibility(idle ? View.VISIBLE : View.GONE);
-        refreshFavoritesRow(idle);
+        refreshShortcutsRow(idle);
     }
 
     private void launchApp(AppInfo app) {
@@ -395,11 +397,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void showAppOptionsMenu(View anchor, AppInfo app) {
-        boolean isFavorite = favoriteStore.isFavorite(app);
         PopupMenu menu = new PopupMenu(this, anchor);
         menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
-        menu.getMenu().add(0, 2, 1, isFavorite ? R.string.menu_remove_from_favorites : R.string.menu_add_to_favorites);
-        menu.getMenu().add(0, 3, 2, R.string.menu_app_info);
+        menu.getMenu().add(0, 2, 1, R.string.menu_app_info);
+        menu.getMenu().add(0, 3, 2, R.string.menu_edit_app);
         menu.getMenu().add(0, 4, 3, R.string.menu_uninstall);
         menu.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
@@ -407,11 +408,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     addAppToFirstFreeCell(app);
                     return true;
                 case 2:
-                    favoriteStore.toggle(app);
-                    refreshFavoritesRow(searchInput.getText().length() == 0);
+                    IntentUtil.openAppInfo(this, app.packageName);
                     return true;
                 case 3:
-                    IntentUtil.openAppInfo(this, app.packageName);
+                    com.piko.launcher.ui.settings.AppEditActivity.start(this, app);
                     return true;
                 case 4:
                     IntentUtil.uninstall(this, app.packageName);
@@ -654,21 +654,26 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         HomeItem item = (HomeItem) child.getTag();
         PopupMenu menu = new PopupMenu(this, child);
         int id = 0;
-        final int idInfo = ++id, idUninstall = item.type == HomeItem.TYPE_APP ? ++id : -1;
+        final int idInfo = item.type == HomeItem.TYPE_APP ? ++id : -1;
+        final int idEdit = item.type == HomeItem.TYPE_APP ? ++id : -1;
+        final int idUninstall = item.type == HomeItem.TYPE_APP ? ++id : -1;
         final int idResize = item.type == HomeItem.TYPE_WIDGET ? ++id : -1;
         final int idMovePage = gridPages.size() > 1 ? ++id : -1;
         final int idRemove = ++id;
 
-        if (item.type == HomeItem.TYPE_APP) menu.getMenu().add(0, idInfo, 0, R.string.menu_app_info);
-        if (idUninstall != -1) menu.getMenu().add(0, idUninstall, 1, R.string.menu_uninstall);
-        if (idResize != -1) menu.getMenu().add(0, idResize, 2, R.string.menu_resize_widget);
-        if (idMovePage != -1) menu.getMenu().add(0, idMovePage, 3, R.string.menu_add_to_home);
-        menu.getMenu().add(0, idRemove, 4, R.string.menu_remove_from_home);
+        if (idInfo != -1) menu.getMenu().add(0, idInfo, 0, R.string.menu_app_info);
+        if (idEdit != -1) menu.getMenu().add(0, idEdit, 1, R.string.menu_edit_app);
+        if (idUninstall != -1) menu.getMenu().add(0, idUninstall, 2, R.string.menu_uninstall);
+        if (idResize != -1) menu.getMenu().add(0, idResize, 3, R.string.menu_resize_widget);
+        if (idMovePage != -1) menu.getMenu().add(0, idMovePage, 4, R.string.menu_add_to_home);
+        menu.getMenu().add(0, idRemove, 5, R.string.menu_remove_from_home);
 
         menu.setOnMenuItemClickListener(m -> {
             int clicked = m.getItemId();
             if (clicked == idInfo) {
                 IntentUtil.openAppInfo(this, item.packageName);
+            } else if (clicked == idEdit) {
+                com.piko.launcher.ui.settings.AppEditActivity.start(this, toAppInfo(item));
             } else if (clicked == idUninstall) {
                 IntentUtil.uninstall(this, item.packageName);
             } else if (clicked == idResize) {
@@ -737,41 +742,14 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         return new AppInfo(item.packageName, item.activityName, item.label);
     }
 
-    // ---------------------------------------------------------- favorites row
+    // ---------------------------------------------------------- shortcuts row
 
-    /** Below the search bar, idle-only: pinned favourite apps plus quick-contact shortcuts. */
-    private void refreshFavoritesRow(boolean idle) {
+    /** Below the search bar, idle-only: quick-contact shortcuts. */
+    private void refreshShortcutsRow(boolean idle) {
         dockContainer.removeAllViews();
         if (!idle) {
             dockScroll.setVisibility(View.GONE);
             return;
-        }
-
-        List<AppInfo> favorites = favoriteStore.loadAll();
-        int iconSizePx = (int) (32 * getResources().getDisplayMetrics().density);
-        for (AppInfo app : favorites) {
-            View chip = LayoutInflater.from(this).inflate(R.layout.item_dock_app, dockContainer, false);
-            ImageView icon = chip.findViewById(R.id.icon);
-            TextView label = chip.findViewById(R.id.label);
-            label.setText(app.label);
-            IconCache.get(this).load(app, icon, iconSizePx);
-            chip.setOnClickListener(v -> {
-                usageStore.recordLaunch(app.key());
-                IntentUtil.launchApp(this, app);
-            });
-            chip.setOnLongClickListener(v -> {
-                new AlertDialog.Builder(this)
-                        .setTitle(R.string.confirm_remove_favorite_title)
-                        .setMessage(getString(R.string.confirm_remove_favorite_message, app.label))
-                        .setPositiveButton(R.string.action_remove, (dialog, which) -> {
-                            favoriteStore.remove(app);
-                            refreshFavoritesRow(true);
-                        })
-                        .setNegativeButton(R.string.action_cancel, null)
-                        .show();
-                return true;
-            });
-            dockContainer.addView(chip);
         }
 
         List<ShortcutContact> shortcuts = shortcutStore.loadAll();
@@ -800,7 +778,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             dockContainer.addView(chip);
         }
 
-        dockScroll.setVisibility(favorites.isEmpty() && shortcuts.isEmpty() ? View.GONE : View.VISIBLE);
+        dockScroll.setVisibility(shortcuts.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     private String initials(String name) {
@@ -844,7 +822,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     @Override
     public void onIndexReady(List<AppInfo> apps) {
-        currentApps = apps;
+        rawApps = apps;
+        currentApps = com.piko.launcher.core.AppCustomizationStore.get(this).applyAll(rawApps);
         filterAndShow(searchInput.getText().toString());
     }
 
@@ -864,6 +843,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             return;
         }
         widgetHostController.startListening();
+        currentApps = com.piko.launcher.core.AppCustomizationStore.get(this).applyAll(rawApps);
         filterAndShow(searchInput.getText().toString());
     }
 

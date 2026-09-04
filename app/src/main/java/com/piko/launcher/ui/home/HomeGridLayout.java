@@ -2,9 +2,9 @@ package com.piko.launcher.ui.home;
 
 import android.content.Context;
 import android.graphics.Rect;
-import android.view.GestureDetector;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.MotionEvent;
-import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewConfiguration;
@@ -16,6 +16,14 @@ import com.piko.launcher.core.HomeItem;
  * (see {@link GridLayoutParams}); long-pressing an empty cell asks the host
  * to offer "add app / add widget", long-pressing an occupant starts a manual
  * drag-to-reorder gesture (no AndroidX drag helpers exist to lean on).
+ *
+ * Long-press detection is hand-rolled (not {@link android.view.GestureDetector})
+ * so it can be reliably suppressed the moment the touch drifts horizontally —
+ * the page swiper (HorizontalPager) only ever gets to steal a gesture once it
+ * exceeds its own touch slop, which can take longer than the long-press
+ * timeout on a slow, deliberate swipe. Self-cancelling on a much smaller
+ * drift than that slop means a swipe reliably wins the race instead of
+ * occasionally popping a context menu mid-swipe.
  */
 public final class HomeGridLayout extends ViewGroup {
 
@@ -29,29 +37,31 @@ public final class HomeGridLayout extends ViewGroup {
 
     private final int columns;
     private final int rows;
-    private final GestureDetector gestureDetector;
     private Callbacks callbacks;
 
     private final int touchSlop;
+    /** Movement past this (well under touchSlop) cancels the pending long-press — a swipe always wins. */
+    private final int moveCancelThreshold;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+
     private int cellSize;
     private View draggingView;
     private float dragOffsetX, dragOffsetY;
-    private float dragStartRawX, dragStartRawY;
+    private float dragStartX, dragStartY;
     private boolean dragMoved;
+
+    private float downX, downY;
+    private boolean longPressArmed;
+    private boolean longPressFired;
+    private Runnable pendingLongPress;
 
     public HomeGridLayout(Context context, int columns, int rows) {
         super(context);
         this.columns = columns;
         this.rows = rows;
-        gestureDetector = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public void onLongPress(MotionEvent e) {
-                handleLongPress(e);
-            }
-        });
-        gestureDetector.setIsLongpressEnabled(true);
         setChildrenDrawingOrderEnabled(true);
         touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        moveCancelThreshold = Math.max(4, touchSlop / 2);
     }
 
     public void setCallbacks(Callbacks callbacks) {
@@ -102,22 +112,43 @@ public final class HomeGridLayout extends ViewGroup {
         return null;
     }
 
-    private void handleLongPress(MotionEvent e) {
-        View child = childAt(e.getX(), e.getY());
+    private void scheduleLongPress(float x, float y) {
+        downX = x;
+        downY = y;
+        longPressArmed = true;
+        longPressFired = false;
+        pendingLongPress = () -> {
+            if (!longPressArmed) return;
+            longPressFired = true;
+            fireLongPress(downX, downY);
+        };
+        handler.postDelayed(pendingLongPress, ViewConfiguration.getLongPressTimeout());
+    }
+
+    private void cancelPendingLongPress() {
+        longPressArmed = false;
+        if (pendingLongPress != null) {
+            handler.removeCallbacks(pendingLongPress);
+            pendingLongPress = null;
+        }
+    }
+
+    private void fireLongPress(float x, float y) {
+        View child = childAt(x, y);
         if (child == null) {
             if (callbacks != null && cellSize > 0) {
-                int col = Math.min(columns - 1, (int) (e.getX() / cellSize));
-                int row = Math.min(rows - 1, (int) (e.getY() / cellSize));
+                int col = Math.min(columns - 1, (int) (x / cellSize));
+                int row = Math.min(rows - 1, (int) (y / cellSize));
                 callbacks.onEmptyCellLongPress(col, row);
             }
             return;
         }
         draggingView = child;
         dragMoved = false;
-        dragStartRawX = e.getRawX();
-        dragStartRawY = e.getRawY();
-        dragOffsetX = e.getX() - child.getLeft();
-        dragOffsetY = e.getY() - child.getTop();
+        dragStartX = x;
+        dragStartY = y;
+        dragOffsetX = x - child.getLeft();
+        dragOffsetY = y - child.getTop();
         child.setAlpha(0.75f);
         child.bringToFront();
         if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
@@ -125,7 +156,24 @@ public final class HomeGridLayout extends ViewGroup {
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
-        gestureDetector.onTouchEvent(ev);
+        switch (ev.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                scheduleLongPress(ev.getX(), ev.getY());
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (longPressArmed && !longPressFired) {
+                    float dx = ev.getX() - downX;
+                    float dy = ev.getY() - downY;
+                    if (dx * dx + dy * dy > moveCancelThreshold * moveCancelThreshold) {
+                        cancelPendingLongPress();
+                    }
+                }
+                break;
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+                if (!longPressFired) cancelPendingLongPress();
+                break;
+        }
         return draggingView != null;
     }
 
@@ -135,8 +183,8 @@ public final class HomeGridLayout extends ViewGroup {
             switch (ev.getActionMasked()) {
                 case MotionEvent.ACTION_MOVE: {
                     if (!dragMoved) {
-                        float dx = ev.getRawX() - dragStartRawX;
-                        float dy = ev.getRawY() - dragStartRawY;
+                        float dx = ev.getX() - dragStartX;
+                        float dy = ev.getY() - dragStartY;
                         if (dx * dx + dy * dy > touchSlop * touchSlop) dragMoved = true;
                     }
                     int newLeft = (int) (ev.getX() - dragOffsetX);
@@ -148,9 +196,7 @@ public final class HomeGridLayout extends ViewGroup {
                     return true;
                 }
                 case MotionEvent.ACTION_CANCEL: {
-                    // An ancestor (the page swiper) hijacked the gesture — e.g. a slow swipe that
-                    // started over an icon before crossing its own drag threshold. Just drop the
-                    // in-progress drag silently; a hijacked gesture is never a deliberate long-press.
+                    // An ancestor hijacked the gesture — drop the in-progress drag silently.
                     View dropped = draggingView;
                     draggingView = null;
                     dropped.setAlpha(1f);

@@ -4,16 +4,18 @@ import android.content.ActivityNotFoundException;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.provider.ContactsContract;
 import android.provider.Settings;
 import android.widget.Toast;
 
 import com.piko.launcher.R;
 import com.piko.launcher.core.AppInfo;
-import com.piko.launcher.core.Prefs;
+import com.piko.launcher.core.WebSearchEngines;
 
 /**
  * Every outward-facing Intent Piko fires lives here: app launch/management,
@@ -50,10 +52,21 @@ public final class IntentUtil {
     }
 
     public static void uninstall(Context context, String packageName) {
-        Intent intent = new Intent(Intent.ACTION_DELETE);
-        intent.setData(Uri.parse("package:" + packageName));
+        Intent intent = new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + packageName));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(intent);
+        try {
+            context.startActivity(intent);
+        } catch (Exception e) {
+            // Some OEM package installers reject ACTION_DELETE outright (or the app is a
+            // protected system package); ACTION_UNINSTALL_PACKAGE is the documented fallback.
+            try {
+                Intent fallback = new Intent(Intent.ACTION_UNINSTALL_PACKAGE, Uri.parse("package:" + packageName));
+                fallback.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(fallback);
+            } catch (Exception e2) {
+                Toast.makeText(context, R.string.uninstall_failed, Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     /** Opens the dialer pre-filled; never requires a runtime permission. */
@@ -140,12 +153,22 @@ public final class IntentUtil {
         }
     }
 
-    /** Opens the user's chosen engine (Google or Brave) with the query pre-filled. */
-    public static void webSearch(Context context, String engine, String query) {
-        String base = Prefs.SEARCH_ENGINE_BRAVE.equals(engine)
-                ? "https://search.brave.com/search?q="
-                : "https://www.google.com/search?q=";
+    /** Opens the given engine id (see {@link WebSearchEngines}) with the query pre-filled. */
+    public static void webSearch(Context context, String engineId, String query) {
+        String base = WebSearchEngines.byId(engineId).urlPrefix;
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(base + Uri.encode(query)));
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            context.startActivity(intent);
+        } catch (ActivityNotFoundException e) {
+            Toast.makeText(context, R.string.no_results, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    /** Opens the system Contacts app on this contact's detail page. */
+    public static void openContactInfo(Context context, long contactId) {
+        Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId);
+        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             context.startActivity(intent);
