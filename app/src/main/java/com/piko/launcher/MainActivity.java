@@ -699,27 +699,30 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     /** {@code fixed}: nothing to collapse (a lone result), so the buttons are always shown and the header is a plain label. */
     private List<SearchResult> group(String key, String title, String sub, int icon, String copy, List<SearchResult> kids, boolean fixed) {
-        boolean open = fixed || expandedContacts.contains(key);
         List<SearchResult> rows = new ArrayList<>();
-        rows.add(SearchResult.forAction(null, title, sub, () -> {
+        SearchResult header = SearchResult.forAction(null, title, sub, () -> {
             if (fixed) return;
             if (!expandedContacts.remove(key)) expandedContacts.add(key);
-            filterAndShow(searchInput.getText().toString());
-        }).withIcon(icon).grouped(fixed ? SearchResult.GROUP_FIXED : open ? SearchResult.GROUP_OPEN : SearchResult.GROUP_HEADER).copyOnLongPress(copy));
-        if (open) {
-            List<SearchResult.Chip> chips = new ArrayList<>();
-            for (SearchResult k : kids) {
-                SearchResult.Chip c = new SearchResult.Chip();
-                c.icon = k.icon;
-                c.badge = k.badge;
-                c.label = chipText(k);
-                c.color = chipColor(k.shortcutKind);
-                c.run = k.action;
-                if (k.shortcutKind != null) c.onLongPress = v -> showAddToHome(v, k);
-                chips.add(c);
-            }
-            rows.add(SearchResult.forChips(chips));
+            renderResults(false); // groups are resolved at render time, so toggling needs no new search
+        }).withIcon(icon).copyOnLongPress(copy);
+        header.groupKey = key;
+        header.groupFixed = fixed;
+        rows.add(header);
+        List<SearchResult.Chip> chips = new ArrayList<>();
+        for (SearchResult k : kids) {
+            SearchResult.Chip c = new SearchResult.Chip();
+            c.icon = k.icon;
+            c.badge = k.badge;
+            c.label = chipText(k);
+            c.color = chipColor(k.shortcutKind);
+            c.run = k.action;
+            if (k.shortcutKind != null) c.onLongPress = v -> showAddToHome(v, k);
+            chips.add(c);
         }
+        SearchResult strip = SearchResult.forChips(chips);
+        strip.groupKey = key;
+        strip.groupFixed = fixed;
+        rows.add(strip);
         return rows;
     }
 
@@ -928,12 +931,23 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void renderResults(boolean idle) {
         // Best match renders nearest the search bar: reverse so it lands last in a stackFromBottom list.
-        List<SearchResult> display = new ArrayList<>(currentResults);
+        List<SearchResult> display = new ArrayList<>();
+        for (SearchResult r : currentResults) {
+            if (r.groupKey != null) {
+                boolean open = r.groupFixed || expandedContacts.contains(r.groupKey);
+                if (r.type == SearchResult.TYPE_CHIPS) {
+                    if (!open) continue;
+                } else {
+                    r.group = r.groupFixed ? SearchResult.GROUP_FIXED : open ? SearchResult.GROUP_OPEN : SearchResult.GROUP_HEADER;
+                }
+            }
+            display.add(r);
+        }
         Collections.reverse(display);
         searchAdapter.submit(display, searchInput.getText().toString());
         if (!idle && !display.isEmpty()) searchAdapter.setSelected(display.size() - 1);
 
-        boolean hasResults = !currentResults.isEmpty();
+        boolean hasResults = !display.isEmpty();
         resultsOverlay.setVisibility(idle ? View.GONE : View.VISIBLE);
         pageIndicator.setVisibility(idle && gridPages.size() > 1 ? View.VISIBLE : View.INVISIBLE);
         resultsList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
@@ -1614,10 +1628,25 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     /** Rebuilds the row of page thumbnails (tap = edit that page, hold + drag = reorder, trailing + = add). */
     private void refreshStrip() {
         if (ovStrip == null || dragCard != null) return;
-        ovStrip.removeAllViews();
         int n = gridPages.size();
         int cur = pager.getCurrentItem();
         int home = n > 1 ? defaultIndex() : -1;
+        int thumbs = 0;
+        for (int i = 0; i < ovStrip.getChildCount(); i++) {
+            if (ovStrip.getChildAt(i) instanceof com.piko.launcher.ui.home.PageThumbView) thumbs++;
+        }
+        if (thumbs == n && ovStrip.getChildCount() > 0) {
+            // Same pages: just move the highlight and follow the current page, keeping the scroll smooth.
+            for (int i = 0; i < n; i++) {
+                ((com.piko.launcher.ui.home.PageThumbView) ovStrip.getChildAt(i))
+                        .bind(homeItems, i, prefs.columns(), prefs.rows(), i == cur, i == home);
+                ovStrip.getChildAt(i).setTranslationX(0);
+            }
+            View c = ovStrip.getChildAt(cur);
+            ovStripScroll.smoothScrollTo(Math.max(0, c.getLeft() - (ovStripScroll.getWidth() - c.getWidth()) / 2), 0);
+            return;
+        }
+        ovStrip.removeAllViews();
         for (int i = 0; i < n; i++) {
             final int index = i;
             com.piko.launcher.ui.home.PageThumbView thumb = new com.piko.launcher.ui.home.PageThumbView(this);
@@ -1758,7 +1787,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void enterOverview() {
         if (overview) return;
         overview = true;
-        pager.setSwipeEnabled(false);
         for (HomeGridLayout g : gridPages) g.setLongPressEnabled(false);
         searchInput.clearFocus();
         hideKeyboard();
@@ -1790,7 +1818,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (!overview) return;
         overview = false;
         cancelPlacing();
-        pager.setSwipeEnabled(true);
         for (HomeGridLayout g : gridPages) g.setLongPressEnabled(true);
         pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .withEndAction(() -> pagerRoot.setBackground(null)).start();
@@ -1808,7 +1835,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         int n = gridPages.size();
         boolean isDefault = n == 1 || idx == defaultIndex();
         String name = n == 1 ? "Home" : "Page " + (idx + 1) + " of " + n;
-        overviewTitle.setText((isDefault && n > 1 ? name + " · default" : name) + "\n" + getString(R.string.ov_swipe_hint));
+        overviewTitle.setText(isDefault && n > 1 ? name + " · default" : name);
         if (!overview) return;
         boolean hasItems = false;
         for (HomeItem it : homeItems) if (it.page == idx) { hasItems = true; break; }

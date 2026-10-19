@@ -55,6 +55,10 @@ public final class SearchResult {
     /** Copied on long-press when set (e.g. a contact's number). */
     public String copyText;
 
+    /** Group membership: the header and its chip strip share a key; {@code groupFixed} groups never collapse. */
+    public String groupKey;
+    public boolean groupFixed;
+
     public SearchResult grouped(int g) {
         group = g;
         return this;
