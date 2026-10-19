@@ -535,7 +535,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void buildPageIndicator(int totalPages) {
         pageIndicator.removeAllViews();
-        pageIndicator.setVisibility(totalPages > 1 && resultsOverlay.getVisibility() != View.VISIBLE ? View.VISIBLE : View.INVISIBLE);
+        pageIndicator.setVisibility(resultsOverlay.getVisibility() == View.VISIBLE ? View.GONE : totalPages > 1 ? View.VISIBLE : View.INVISIBLE);
         float d = getResources().getDisplayMetrics().density;
         int dotSize = (int) (7 * d);
         int margin = (int) (4 * d);
@@ -955,7 +955,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
         boolean hasResults = !display.isEmpty();
         resultsOverlay.setVisibility(idle ? View.GONE : View.VISIBLE);
-        pageIndicator.setVisibility(idle && gridPages.size() > 1 ? View.VISIBLE : View.INVISIBLE);
+        pageIndicator.setVisibility(!idle ? View.GONE : gridPages.size() > 1 ? View.VISIBLE : View.INVISIBLE);
         resultsList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
         emptyText.setVisibility(!hasResults ? View.VISIBLE : View.GONE);
     }
