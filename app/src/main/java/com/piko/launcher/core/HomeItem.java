@@ -25,6 +25,8 @@ public final class HomeItem {
     public int rowSpan = 1;
     /** Free-form position as a fraction of the page (negative = not set, use col/row). */
     public float fx = -1f, fy = -1f;
+    /** Free-form size as page fractions; non-positive means "use colSpan/rowSpan". */
+    public float fw = -1f, fh = -1f;
 
     // TYPE_APP
     public String packageName;
@@ -57,6 +59,10 @@ public final class HomeItem {
             o.put("fx", (double) fx);
             o.put("fy", (double) fy);
         }
+        if (fw > 0 && fh > 0) {
+            o.put("fw", (double) fw);
+            o.put("fh", (double) fh);
+        }
         if (type == TYPE_APP) {
             o.put("pkg", packageName);
             o.put("act", activityName);
@@ -84,6 +90,8 @@ public final class HomeItem {
         item.rowSpan = o.optInt("rowSpan", 1);
         item.fx = (float) o.optDouble("fx", -1);
         item.fy = (float) o.optDouble("fy", -1);
+        item.fw = (float) o.optDouble("fw", -1);
+        item.fh = (float) o.optDouble("fh", -1);
         if (item.type == TYPE_APP) {
             item.packageName = o.optString("pkg");
             item.activityName = o.optString("act");

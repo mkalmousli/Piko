@@ -261,6 +261,42 @@ public final class Prefs {
     public static final String TAP_NONE = "none";
 
     /** Boolean toggles for search sources and contact action buttons; every one defaults to on. */
+    private static final String KEY_CALC_HISTORY = "calc_history";
+    private static final int HISTORY_MAX = 40;
+
+    /** Most recent first; each entry is {expression, value}. */
+    public java.util.List<String[]> calcHistory() {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        try {
+            JSONArray arr = new JSONArray(sp.getString(KEY_CALC_HISTORY, "[]"));
+            for (int i = 0; i < arr.length(); i++) {
+                JSONArray e = arr.getJSONArray(i);
+                out.add(new String[]{e.getString(0), e.getString(1)});
+            }
+        } catch (Exception ignored) {
+        }
+        return out;
+    }
+
+    public void addCalcHistory(String expression, String value) {
+        java.util.List<String[]> list = calcHistory();
+        for (int i = list.size() - 1; i >= 0; i--) {
+            if (list.get(i)[0].equals(expression) && list.get(i)[1].equals(value)) list.remove(i);
+        }
+        list.add(0, new String[]{expression, value});
+        saveCalcHistory(list.size() > HISTORY_MAX ? list.subList(0, HISTORY_MAX) : list);
+    }
+
+    public void clearCalcHistory() {
+        sp.edit().remove(KEY_CALC_HISTORY).apply();
+    }
+
+    private void saveCalcHistory(java.util.List<String[]> list) {
+        JSONArray arr = new JSONArray();
+        for (String[] e : list) arr.put(new JSONArray().put(e[0]).put(e[1]));
+        sp.edit().putString(KEY_CALC_HISTORY, arr.toString()).apply();
+    }
+
     public boolean flag(String key) {
         return sp.getBoolean(key, true);
     }

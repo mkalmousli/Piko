@@ -124,9 +124,20 @@ public final class HomeGridLayout extends ViewGroup {
         this.freeform = freeform;
     }
 
+    /** Pixel size of a child: free-form size when set, otherwise its cell span. */
+    private int widthOf(GridLayoutParams lp) {
+        if (freeform && lp.fw > 0) return Math.max(1, Math.min(getMeasuredWidth(), Math.round(lp.fw * getMeasuredWidth())));
+        return lp.colSpan * cellW;
+    }
+
+    private int heightOf(GridLayoutParams lp) {
+        if (freeform && lp.fh > 0) return Math.max(1, Math.min(getMeasuredHeight(), Math.round(lp.fh * getMeasuredHeight())));
+        return lp.rowSpan * cellH;
+    }
+
     private int leftOf(GridLayoutParams lp) {
         if (freeform && lp.fx >= 0) {
-            int w = lp.colSpan * cellW;
+            int w = widthOf(lp);
             return Math.max(0, Math.min(getMeasuredWidth() - w, Math.round(lp.fx * getMeasuredWidth())));
         }
         return lp.col * cellW;
@@ -134,7 +145,7 @@ public final class HomeGridLayout extends ViewGroup {
 
     private int topOf(GridLayoutParams lp) {
         if (freeform && lp.fy >= 0) {
-            int h = lp.rowSpan * cellH;
+            int h = heightOf(lp);
             return Math.max(0, Math.min(getMeasuredHeight() - h, Math.round(lp.fy * getMeasuredHeight())));
         }
         return lp.row * cellH;
@@ -194,7 +205,7 @@ public final class HomeGridLayout extends ViewGroup {
     private RectF resizeRect() {
         GridLayoutParams lp = (GridLayoutParams) resizeView.getLayoutParams();
         int l = leftOf(lp), t = topOf(lp);
-        return new RectF(l, t, l + lp.colSpan * cellW, t + lp.rowSpan * cellH);
+        return new RectF(l, t, l + widthOf(lp), t + heightOf(lp));
     }
 
     private float handleRadius() {
@@ -316,6 +327,18 @@ public final class HomeGridLayout extends ViewGroup {
             case MotionEvent.ACTION_MOVE: {
                 if (!resizeHandleDown) return true;
                 int l = leftOf(lp), t = topOf(lp);
+                if (freeform) {
+                    float minPx = Math.max(24 * getResources().getDisplayMetrics().density, Math.min(cellW, cellH) * 0.5f);
+                    float w = Math.max(minPx, Math.min(getMeasuredWidth() - l, ev.getX() - l));
+                    float h = Math.max(minPx, Math.min(getMeasuredHeight() - t, ev.getY() - t));
+                    lp.fw = w / getMeasuredWidth();
+                    lp.fh = h / getMeasuredHeight();
+                    lp.colSpan = Math.max(1, (int) Math.ceil(w / cellW - 0.05));
+                    lp.rowSpan = Math.max(1, (int) Math.ceil(h / cellH - 0.05));
+                    requestLayout();
+                    invalidate();
+                    return true;
+                }
                 int cs = Math.round((ev.getX() - l) / (float) cellW);
                 int rs = Math.round((ev.getY() - t) / (float) cellH);
                 cs = Math.max(1, Math.min((getMeasuredWidth() - l) / cellW, cs));
@@ -514,7 +537,7 @@ public final class HomeGridLayout extends ViewGroup {
         View v = draggingView;
         if (v == null) return;
         GridLayoutParams lp = (GridLayoutParams) v.getLayoutParams();
-        int w = lp.colSpan * cellW, h = lp.rowSpan * cellH;
+        int w = widthOf(lp), h = heightOf(lp);
         int left = (int) (x - dragOffsetX), top = (int) (y - dragOffsetY);
         if (v.getLeft() != left || v.getTop() != top) {
             v.layout(left, top, left + w, top + h);
@@ -601,7 +624,7 @@ public final class HomeGridLayout extends ViewGroup {
     private void settleInto(View v, int fromLeft, int fromTop) {
         GridLayoutParams lp = (GridLayoutParams) v.getLayoutParams();
         int left = leftOf(lp), top = topOf(lp);
-        v.layout(left, top, left + lp.colSpan * cellW, top + lp.rowSpan * cellH);
+        v.layout(left, top, left + widthOf(lp), top + heightOf(lp));
         v.setTranslationX(fromLeft - left);
         v.setTranslationY(fromTop - top);
         drop(v);
@@ -645,7 +668,7 @@ public final class HomeGridLayout extends ViewGroup {
             return;
         }
         if (freeform) {
-            int vw = lp.colSpan * cellW, vh = lp.rowSpan * cellH;
+            int vw = widthOf(lp), vh = heightOf(lp);
             int left = Math.max(0, Math.min(getWidth() - vw, fromLeft));
             int top = Math.max(0, Math.min(getHeight() - vh, fromTop));
             lp.fx = left / (float) getWidth();
@@ -765,8 +788,8 @@ public final class HomeGridLayout extends ViewGroup {
             View child = getChildAt(i);
             GridLayoutParams lp = (GridLayoutParams) child.getLayoutParams();
             child.measure(
-                    MeasureSpec.makeMeasureSpec(lp.colSpan * cellW, MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(lp.rowSpan * cellH, MeasureSpec.EXACTLY));
+                    MeasureSpec.makeMeasureSpec(widthOf(lp), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(heightOf(lp), MeasureSpec.EXACTLY));
         }
     }
 
@@ -779,7 +802,7 @@ public final class HomeGridLayout extends ViewGroup {
             GridLayoutParams lp = (GridLayoutParams) child.getLayoutParams();
             int left = leftOf(lp);
             int top = topOf(lp);
-            child.layout(left, top, left + lp.colSpan * cellW, top + lp.rowSpan * cellH);
+            child.layout(left, top, left + widthOf(lp), top + heightOf(lp));
         }
     }
 
@@ -793,6 +816,8 @@ public final class HomeGridLayout extends ViewGroup {
         public int col, row, colSpan, rowSpan;
         /** Free-form position as page fractions; negative means "use col/row". */
         public float fx = -1f, fy = -1f;
+        /** Free-form size as page fractions; non-positive means "use colSpan/rowSpan". */
+        public float fw = -1f, fh = -1f;
 
         public GridLayoutParams(int col, int row, int colSpan, int rowSpan) {
             super(WRAP_CONTENT, WRAP_CONTENT);

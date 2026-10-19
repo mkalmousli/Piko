@@ -241,7 +241,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             } else if (result.type == SearchResult.TYPE_WEB) {
                 IntentUtil.webSearch(this, primaryEngine(), result.text);
             } else if (result.type == SearchResult.TYPE_CALC && result.value != null) {
-                IntentUtil.copyToClipboard(this, result.text, result.value);
+                copyCalc(result);
             }
         });
 
@@ -319,7 +319,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         } else if (best.type == SearchResult.TYPE_WEB) {
             IntentUtil.webSearch(this, primaryEngine(), best.text);
         }
-        // TYPE_CALC: enter does nothing extra — tapping the row copies the value.
+        else if (best.type == SearchResult.TYPE_CALC && best.value != null) copyCalc(best);
+    }
+
+    private void copyCalc(SearchResult r) {
+        IntentUtil.copyToClipboard(this, r.text, r.value);
+        if (r.text != null && !r.text.isEmpty()) prefs.addCalcHistory(r.text, r.value);
     }
 
     /** The first enabled engine, used when the user taps the web-search row itself rather than an engine chip. */
@@ -404,6 +409,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 HomeGridLayout.GridLayoutParams lp = (HomeGridLayout.GridLayoutParams) child.getLayoutParams();
                 item.colSpan = lp.colSpan;
                 item.rowSpan = lp.rowSpan;
+                item.fw = lp.fw;
+                item.fh = lp.fh;
+                if (child instanceof android.appwidget.AppWidgetHostView) {
+                    float d = getResources().getDisplayMetrics().density;
+                    int w = Math.round(child.getWidth() / d), h = Math.round(child.getHeight() / d);
+                    ((android.appwidget.AppWidgetHostView) child).updateAppWidgetSize(null, w, h, w, h);
+                }
                 layoutStore.saveAll(homeItems);
             }
 
@@ -420,6 +432,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         HomeGridLayout.GridLayoutParams lp = grid.gridParams(item.col, item.row, item.colSpan, item.rowSpan);
         lp.fx = item.fx;
         lp.fy = item.fy;
+        lp.fw = item.fw;
+        lp.fh = item.fh;
         return lp;
     }
 
@@ -563,6 +577,20 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     currentResults.add(0, SearchResult.forCalc(trimmed, com.piko.launcher.core.MathEval.format(value)));
                 }
             }
+            if (trimmed.equalsIgnoreCase("history") || trimmed.equalsIgnoreCase("calc history")) {
+                List<String[]> hist = prefs.calcHistory();
+                int at = 0;
+                for (String[] h : hist) currentResults.add(at++, SearchResult.forCalc(h[0], h[1]));
+                if (!hist.isEmpty()) {
+                    currentResults.add(at, SearchResult.forAction(null, "Clear calculation history", "Piko", () -> {
+                        prefs.clearCalcHistory();
+                        searchInput.setText("");
+                    }).withIcon(R.drawable.ic_trash));
+                } else {
+                    currentResults.add(at, SearchResult.forAction(null, "No calculations yet", "Tap a result to save it", () -> { })
+                            .withIcon(R.drawable.ic_calc));
+                }
+            }
             if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && trimmed.matches("\\+?[0-9][0-9\\s\\-().]*")
                     && trimmed.replaceAll("[^0-9]", "").length() >= 3 && !hasContactWithNumber(trimmed)) {
                 // Not in the address book: still offer call/message for the typed number.
@@ -669,6 +697,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     // ---------------------------------------------------- piko quick actions
 
     private static final String[][] PIKO_ACTIONS = {
+            {"history", "Calculation history", "calc calculator math history recent results"},
             {"settings", "Piko settings", "settings preferences options config"},
             {"overview", "Edit home screen", "edit pages overview rearrange zoom organize"},
             {"addpage", "Add page", "new page add"},
@@ -701,6 +730,11 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void runPikoAction(String id) {
+        if (id.equals("history")) {
+            searchInput.setText("history");
+            searchInput.setSelection(searchInput.getText().length());
+            return;
+        }
         searchInput.setText("");
         hideKeyboard();
         switch (id) {
@@ -1557,6 +1591,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         boolean[][] used = new boolean[rws][cols];
         for (HomeItem it : onPage) {
             it.fx = it.fy = -1f;
+            it.fw = it.fh = -1f;
             boolean placed = false;
             for (int r = 0; r + it.rowSpan <= rws && !placed; r++) {
                 for (int c = 0; c + it.colSpan <= cols && !placed; c++) {
