@@ -281,7 +281,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     item.type = HomeItem.TYPE_SHORTCUT;
                     item.kind = result.shortcutKind;
                     item.data = result.shortcutData;
-                    item.label = result.text;
+                    item.label = result.chipLabel != null ? result.chipLabel : result.text;
                     placeOnHome(item);
                     return true;
                 });
@@ -636,6 +636,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
                 currentResults.add(at, SearchResult.forContact(new ContactInfo(-1, trimmed, trimmed)));
             }
+            if (URL_PATTERN.matcher(trimmed).matches()) {
+                int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
+                final String url = trimmed.matches("(?i)^https?://.*") ? trimmed : "https://" + trimmed;
+                String host = trimmed.replaceFirst("(?i)^https?://", "").replaceFirst("^www\\.", "").replaceFirst("[/?#].*$", "");
+                currentResults.add(at, SearchResult.forAction(null, "Open " + trimmed, "Website", () -> openUrl(url))
+                        .withIcon(HomeIconViewFactory.iconForKind("url")).pinnable("url", url).chipLabel(host));
+            }
             if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && android.util.Patterns.EMAIL_ADDRESS.matcher(trimmed).matches()) {
                 int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
                 currentResults.addAll(at, emailRows(trimmed));
@@ -650,8 +657,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     c.color = chipColor("web");
                     c.run = () -> IntentUtil.webSearch(this, engineId, trimmed);
                     c.onLongPress = v -> {
-                        SearchResult pin = SearchResult.forAction(null, getString(R.string.search_engine_for, e.label),
-                                trimmed, null).pinnable("web", engineId);
+                        SearchResult pin = SearchResult.forAction(null, e.label + " · " + trimmed,
+                                trimmed, null).pinnable("web", engineId + "\n" + trimmed);
                         showAddToHome(v, pin);
                     };
                     chips.add(c);
@@ -740,7 +747,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             item.type = HomeItem.TYPE_SHORTCUT;
             item.kind = result.shortcutKind;
             item.data = result.shortcutData;
-            item.label = result.text;
+            item.label = result.chipLabel != null ? result.chipLabel : result.text;
             placeOnHome(item);
             return true;
         });
@@ -796,6 +803,17 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 () -> IntentUtil.copyToClipboard(this, "email", email))
                 .withIcon(HomeIconViewFactory.iconForKind("copyemail")).pinnable("copyemail", email));
         return group("e:" + email, email, "", R.drawable.ic_mail, email, kids, true);
+    }
+
+    private static final java.util.regex.Pattern URL_PATTERN = java.util.regex.Pattern.compile(
+            "(?i)^(https?://)?([a-z0-9-]+\\.)+[a-z]{2,}(:\\d+)?(/\\S*)?$");
+
+    private void openUrl(String url) {
+        try {
+            startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void writeEmail(String email) {
@@ -921,7 +939,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             case "email": writeEmail(data); break;
             case "addemail": addEmailToContacts(data); break;
             case "copyemail": IntentUtil.copyToClipboard(this, "email", data); break;
-            case "web": IntentUtil.webSearch(this, data, ""); break;
+            case "web": {
+                int nl = data.indexOf('\n');
+                IntentUtil.webSearch(this, nl < 0 ? data : data.substring(0, nl), nl < 0 ? "" : data.substring(nl + 1));
+                break;
+            }
+            case "url": openUrl(data); break;
             case "piko": runPikoAction(data); break;
         }
     }
