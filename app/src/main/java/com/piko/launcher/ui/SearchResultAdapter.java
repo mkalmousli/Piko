@@ -53,6 +53,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     public void submit(List<SearchResult> newItems, String query) {
         this.items = newItems;
+        this.selected = -1;
         this.currentQuery = query == null ? "" : query;
         notifyDataSetChanged();
     }
@@ -92,8 +93,26 @@ public final class SearchResultAdapter extends BaseAdapter {
         return type != SearchResult.TYPE_CONTACT;
     }
 
+    private int selected = -1;
+
+    /** Keyboard selection (display index, -1 = none). */
+    public void setSelected(int position) {
+        selected = position;
+        notifyDataSetChanged();
+    }
+
+    public int getSelected() {
+        return selected;
+    }
+
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
+        View v = buildView(position, convertView, parent);
+        v.setBackgroundResource(position == selected ? R.drawable.bg_selected : R.drawable.bg_pressable);
+        return v;
+    }
+
+    private View buildView(int position, View convertView, ViewGroup parent) {
         SearchResult result = items.get(position);
         switch (result.type) {
             case SearchResult.TYPE_APP:
@@ -133,13 +152,16 @@ public final class SearchResultAdapter extends BaseAdapter {
             view = LayoutInflater.from(context).inflate(R.layout.list_item_action, parent, false);
             holder = new ActionHolder();
             holder.badge = view.findViewById(R.id.badge);
+            holder.badgeIcon = view.findViewById(R.id.badge_icon);
             holder.title = view.findViewById(R.id.title);
             holder.subtitle = view.findViewById(R.id.subtitle);
             view.setTag(holder);
         } else {
             holder = (ActionHolder) view.getTag();
         }
-        holder.badge.setText(result.badge);
+        holder.badge.setText(result.icon == 0 ? result.badge : "");
+        holder.badgeIcon.setImageResource(result.icon);
+        holder.badgeIcon.setVisibility(result.icon == 0 ? View.GONE : View.VISIBLE);
         holder.title.setText(TextHighlighter.highlight(context, result.text, currentQuery));
         holder.subtitle.setText(result.subtitle);
         holder.subtitle.setVisibility(result.subtitle == null || result.subtitle.isEmpty() ? View.GONE : View.VISIBLE);
@@ -277,6 +299,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     private static final class ActionHolder {
         TextView badge, title, subtitle;
+        android.widget.ImageView badgeIcon;
     }
 
     private static final class CalcHolder {

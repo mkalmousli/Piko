@@ -125,4 +125,49 @@ public final class SettingsUi {
         row.setOnClickListener(l);
         root.addView(row);
     }
+
+    interface IntCb {
+        void on(int value);
+    }
+
+    /** Label with a − value + stepper on the right. */
+    void stepper(String label, int initial, int min, int max, IntCb cb) {
+        LinearLayout row = new LinearLayout(activity);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(8), 0, dp(8));
+        row.addView(text(label, 15, R.color.piko_text_primary),
+                new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        final int[] v = {initial};
+        TextView value = text(String.valueOf(initial), 16, R.color.piko_text_primary);
+        value.setGravity(Gravity.CENTER);
+        android.widget.ImageButton minus = stepButton(R.drawable.ic_minus);
+        android.widget.ImageButton plus = stepButton(R.drawable.ic_add);
+        minus.setOnClickListener(x -> {
+            if (v[0] > min) { v[0]--; value.setText(String.valueOf(v[0])); cb.on(v[0]); }
+        });
+        plus.setOnClickListener(x -> {
+            if (v[0] < max) { v[0]++; value.setText(String.valueOf(v[0])); cb.on(v[0]); }
+        });
+        row.addView(minus);
+        row.addView(value, new LinearLayout.LayoutParams(dp(36), LinearLayout.LayoutParams.WRAP_CONTENT));
+        row.addView(plus);
+        root.addView(row);
+    }
+
+    private android.widget.ImageButton stepButton(int icon) {
+        android.widget.ImageButton b = new android.widget.ImageButton(activity);
+        b.setImageResource(icon);
+        b.setBackgroundResource(R.drawable.bg_pressable);
+        b.setLayoutParams(new LinearLayout.LayoutParams(dp(40), dp(40)));
+        return b;
+    }
+
+    /** A tappable danger-coloured text action. */
+    void action(String label, int colorRes, View.OnClickListener l) {
+        TextView t = text(label, 15, colorRes);
+        t.setBackgroundResource(R.drawable.bg_pressable);
+        t.setPadding(dp(4), dp(12), dp(4), dp(12));
+        t.setOnClickListener(l);
+        root.addView(t);
+    }
 }

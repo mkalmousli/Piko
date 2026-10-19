@@ -116,7 +116,7 @@ public final class HomeGridLayout extends ViewGroup {
         textPaint.setColor(0xFFFFFFFF);
         textPaint.setTextAlign(Paint.Align.CENTER);
         textPaint.setTextSize(11 * density);
-        removeLabel = "✕  " + context.getString(com.piko.launcher.R.string.drop_to_remove);
+        removeLabel = context.getString(com.piko.launcher.R.string.drop_to_remove);
     }
 
     public void setFreeform(boolean freeform) {
@@ -236,14 +236,14 @@ public final class HomeGridLayout extends ViewGroup {
         fillPaint.setColor(0x337C9CFF);
     }
 
-    private static String actionGlyph(int a) {
+    private static int actionIcon(int a) {
         switch (a) {
-            case ACTION_REMOVE: return "✕";
-            case ACTION_UNINSTALL: return "⊖";
-            case ACTION_INFO: return "ⓘ";
-            case ACTION_EDIT: return "✎";
-            case ACTION_RESIZE: return "⤡";
-            default: return "Aa";
+            case ACTION_REMOVE: return com.piko.launcher.R.drawable.ic_close;
+            case ACTION_UNINSTALL: return com.piko.launcher.R.drawable.ic_trash;
+            case ACTION_INFO: return com.piko.launcher.R.drawable.ic_info;
+            case ACTION_EDIT: return com.piko.launcher.R.drawable.ic_edit;
+            case ACTION_RESIZE: return com.piko.launcher.R.drawable.ic_resize;
+            default: return com.piko.launcher.R.drawable.ic_text;
         }
     }
 
@@ -275,8 +275,11 @@ public final class HomeGridLayout extends ViewGroup {
                 canvas.drawRoundRect(tmpRect, 12 * density, 12 * density, fillPaint);
             }
             textPaint.setAlpha(removeArmed ? 255 : 120);
-            textPaint.setTextSize(20 * density);
-            canvas.drawText(actionGlyph(actions[i]), i * tileW + tileW / 2f, h / 2f + 2 * density, textPaint);
+            android.graphics.drawable.Drawable ic = getContext().getDrawable(actionIcon(actions[i])).mutate();
+            int cx = (int) (i * tileW + tileW / 2f), cy = (int) (h / 2f - 4 * density), r = (int) (10 * density);
+            ic.setBounds(cx - r, cy - r, cx + r, cy + r);
+            ic.setAlpha(removeArmed ? 255 : 120);
+            ic.draw(canvas);
             textPaint.setTextSize(10.5f * density);
             canvas.drawText(actionLabel(actions[i]), i * tileW + tileW / 2f, h - 10 * density, textPaint);
         }

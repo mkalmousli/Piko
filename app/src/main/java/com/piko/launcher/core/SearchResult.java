@@ -20,6 +20,21 @@ public final class SearchResult {
     /** TYPE_ACTION only: badge glyph, subtitle and what tapping does. */
     public String badge, subtitle;
     public Runnable action;
+    /** TYPE_ACTION only: drawable resource for the badge (0 = use the badge text). */
+    public int icon;
+    /** TYPE_ACTION only: how to rebuild this row as a home shortcut (see {@link HomeItem}). Null = not pinnable. */
+    public String shortcutKind, shortcutData;
+
+    public SearchResult withIcon(int res) {
+        icon = res;
+        return this;
+    }
+
+    public SearchResult pinnable(String kind, String data) {
+        shortcutKind = kind;
+        shortcutData = data;
+        return this;
+    }
     /** TYPE_ACTION only: the contact this row belongs to, so a tap can teach the ranker. */
     public ContactInfo owner;
 

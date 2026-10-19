@@ -53,7 +53,7 @@ public final class PermissionsActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.VERTICAL);
         row.setPadding(0, ui.dp(16), 0, ui.dp(8));
-        row.addView(ui.text(title + (granted ? "  ✓ Allowed" : "  — Not allowed"), 16, R.color.piko_text_primary));
+        row.addView(ui.text(title + (granted ? ": allowed" : ": not allowed"), 16, R.color.piko_text_primary));
         row.addView(ui.text(why, 12, R.color.piko_text_secondary));
         TextView action = ui.text(granted ? "Manage in system settings" : "Allow", 14, R.color.piko_accent);
         action.setPadding(0, ui.dp(8), 0, ui.dp(8));

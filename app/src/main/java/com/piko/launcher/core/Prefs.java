@@ -251,6 +251,7 @@ public final class Prefs {
     public static final String FLAG_SEARCH_CALC = "search_calc";
     public static final String FLAG_SEARCH_CURRENCY = "search_currency";
     public static final String FLAG_SEARCH_WEB = "search_web";
+    public static final String FLAG_QUICK_ACTIONS = "search_quick_actions";
     public static final String FLAG_ACTION_CALL = "contact_action_call";
     public static final String FLAG_ACTION_SMS = "contact_action_sms";
     public static final String FLAG_ACTION_WA_MESSAGE = "contact_action_wa_message";
@@ -303,6 +304,15 @@ public final class Prefs {
 
     public void setHideAllLabels(boolean v) {
         sp.edit().putBoolean("hide_all_labels", v).apply();
+    }
+
+    /** Show the keyboard automatically when the search page is in front (default on). */
+    public boolean autoFocusKeyboard() {
+        return sp.getBoolean("autofocus_keyboard", true);
+    }
+
+    public void setAutoFocusKeyboard(boolean v) {
+        sp.edit().putBoolean("autofocus_keyboard", v).apply();
     }
 
     public boolean isFirstRunDone() {

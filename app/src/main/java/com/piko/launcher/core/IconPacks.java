@@ -80,6 +80,27 @@ public final class IconPacks {
         }
     }
 
+    /** Every distinct drawable name the selected pack themes, sorted; empty when no pack is selected. */
+    public synchronized List<String> drawableNames() {
+        String selected = Prefs.get(context).iconPack();
+        if (selected.isEmpty()) return new ArrayList<>();
+        if (!selected.equals(loadedPack)) load(selected);
+        List<String> names = new ArrayList<>(new java.util.TreeSet<>(mapping.values()));
+        return names;
+    }
+
+    public synchronized Drawable drawableByName(String name) {
+        String selected = Prefs.get(context).iconPack();
+        if (selected.isEmpty() || packResources == null) return null;
+        int id = packResources.getIdentifier(name, "drawable", selected);
+        if (id == 0) return null;
+        try {
+            return packResources.getDrawable(id, null);
+        } catch (Resources.NotFoundException e) {
+            return null;
+        }
+    }
+
     private void load(String pack) {
         loadedPack = pack;
         packResources = null;

@@ -90,4 +90,13 @@
     <string name="ov_done">Done</string>
     <string name="menu_hide_name">Hide name</string>
     <string name="menu_show_name">Show name</string>
+    <string name="ov_set_default">Default</string>
+    <string name="ov_default_set">Default page set</string>
+    <string name="menu_add_to_folder">Add to folder</string>
+    <string name="menu_remove_from_folder">Remove from folder</string>
+    <string name="menu_rename">Rename</string>
+    <string name="new_folder">New folder</string>
+    <string name="folder_default_name">Folder</string>
+    <string name="folder_add_app">Add app</string>
+    <string name="act_add_contact">Add to contacts</string>
 </resources>

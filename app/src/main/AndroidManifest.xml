@@ -92,8 +92,7 @@
             android:exported="false" />
 
         <activity
-            android:name=".ui.settings.ShortcutPickerActivity"
-            android:label="@string/settings_add_shortcut"
+            android:name=".ui.settings.SetupActivity"
             android:screenOrientation="portrait"
             android:exported="false" />
 

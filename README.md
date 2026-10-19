@@ -61,16 +61,23 @@ reach a clean, configurable icon grid. That's it.
 - Enable, reorder, or add your **own engine or AI chat** from any URL with a query parameter.
 
 **Contacts**
-- Search contacts by name or **by phone number**.
+- Search contacts by name or **by phone number**; unknown numbers get an **Add to contacts** row.
 - Every contact action (**Call, SMS, WhatsApp message, WhatsApp call**, open, copy) is its own result row; each can be switched off.
 - Choose what tapping a result does; copy numbers; optional direct-call mode that skips the dialer.
 - Contacts are optional: decline the permission and everything else still works.
 
+**Quick actions & shortcuts**
+- Piko quick actions (settings, setup, overview, ...) appear in search; switch them off in setup.
+- Long-press any action result (call, message, copy, web search, ...) to **add it to home** as a shortcut.
+- Pick results with the keyboard: up/down moves the highlight, Enter activates it.
+
 **Home screen**
-- Configurable grid (columns × rows) and number of pages.
-- Long-press menu: app info, **rename / tags / custom icon**, uninstall, remove from home.
-- Add apps and **widgets** (with resize handles) from the ⋮ menu.
-- Quick-contact shortcuts.
+- Configurable grid (columns × rows); pages are managed in the overview, not in settings.
+- **Folders** (second level) to group apps; choose any page, including search, as the **default page**.
+- Long-press menu: app info, **rename / tags / icon**, uninstall, folder, remove from home.
+- Icons come from your apps, an icon pack or an image; small built-in vector icons look the same on every device.
+- Add apps and **widgets** (with resize handles) from the overview.
+- First-run **setup** asks a few simple questions, including whether the keyboard opens automatically.
 
 **Small & private**
 - Pure Android SDK: no AndroidX, no Material, no analytics, no ad or crash-reporting SDKs.
@@ -80,9 +87,9 @@ reach a clean, configurable icon grid. That's it.
 
 All captured on a **Moto G7 Play** (720×1512).
 
-| Home | Long-press menu | Add menu |
+| Home | Long-press menu | Overview |
 |---|---|---|
-| <img src="docs/screenshots/01-home.png" width="220" alt="Piko home grid"> | <img src="docs/screenshots/02-home-icon-menu.png" width="220" alt="Home icon context menu"> | <img src="docs/screenshots/03-add-menu.png" width="220" alt="Add app, widget and manage apps menu"> |
+| <img src="docs/screenshots/01-home.png" width="220" alt="Piko home grid"> | <img src="docs/screenshots/02-home-icon-menu.png" width="220" alt="Home icon context menu"> | <img src="docs/screenshots/03-add-menu.png" width="220" alt="Page overview"> |
 
 | App search | Calculator | Currency |
 |---|---|---|
@@ -108,7 +115,7 @@ Requires Android 8.0 (API 26) or newer. Releases include a SHA-256 checksum.
 
 | Permission | Why |
 |---|---|
-| `READ_CONTACTS` | Contact search and quick contacts (optional) |
+| `READ_CONTACTS` | Contact search (optional) |
 | `CALL_PHONE` | Direct-call mode (optional, falls back to the dialer) |
 | `INTERNET` | Currency rates and opening web searches |
 | `REQUEST_DELETE_PACKAGES` | Uninstall action in the long-press menu |

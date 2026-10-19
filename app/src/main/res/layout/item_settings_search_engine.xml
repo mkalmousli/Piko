@@ -20,22 +20,24 @@
         android:textColor="@color/piko_text_primary"
         android:textSize="15sp" />
 
-    <TextView
+    <ImageView
         android:id="@+id/btn_up"
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:background="@drawable/bg_pressable"
-        android:gravity="center"
-        android:textColor="@color/piko_accent"
-        android:text="▲" />
+        android:padding="6dp"
+        android:rotation="90"
+        android:src="@drawable/ic_left"
+        android:tint="@color/piko_accent" />
 
-    <TextView
+    <ImageView
         android:id="@+id/btn_down"
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:background="@drawable/bg_pressable"
-        android:gravity="center"
-        android:textColor="@color/piko_accent"
-        android:text="▼" />
+        android:padding="6dp"
+        android:rotation="-90"
+        android:src="@drawable/ic_left"
+        android:tint="@color/piko_accent" />
 
 </LinearLayout>

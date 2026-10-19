@@ -46,21 +46,6 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
-    <HorizontalScrollView
-        android:id="@+id/dock_scroll"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:scrollbars="none"
-        android:visibility="gone">
-
-        <LinearLayout
-            android:id="@+id/dock_container"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal" />
-    </HorizontalScrollView>
-
     <LinearLayout
         android:id="@+id/search_bar"
         android:layout_width="match_parent"
@@ -101,13 +86,6 @@
             android:src="@drawable/ic_gear"
             android:contentDescription="@string/menu_settings" />
 
-        <ImageButton
-            android:id="@+id/btn_more"
-            android:layout_width="34dp"
-            android:layout_height="34dp"
-            android:background="@drawable/bg_pressable"
-            android:src="@drawable/ic_more"
-            android:contentDescription="@string/menu_more" />
     </LinearLayout>
 
 </LinearLayout>

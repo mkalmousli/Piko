@@ -43,8 +43,8 @@ public final class SearchEnginesActivity extends Activity {
             View row = LayoutInflater.from(this).inflate(R.layout.item_settings_search_engine, ui.root, false);
             CheckBox checkBox = row.findViewById(R.id.checkbox);
             TextView label = row.findViewById(R.id.label);
-            TextView up = row.findViewById(R.id.btn_up);
-            TextView down = row.findViewById(R.id.btn_down);
+            View up = row.findViewById(R.id.btn_up);
+            View down = row.findViewById(R.id.btn_down);
 
             label.setText(prefs.isCustomEngine(id) ? engine.label + " (custom)" : engine.label);
             checkBox.setChecked(enabled.contains(id));

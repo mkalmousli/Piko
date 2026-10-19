@@ -142,6 +142,17 @@ public final class AppEditActivity extends Activity {
     }
 
     private void pickIcon() {
+        new android.app.AlertDialog.Builder(this)
+                .setTitle(R.string.change_icon)
+                .setItems(new String[]{"Icons from your apps", "Icon pack", "Image from device"}, (d, which) -> {
+                    if (which == 0) pickFromApps();
+                    else if (which == 1) pickFromPack();
+                    else pickImage();
+                })
+                .show();
+    }
+
+    private void pickImage() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.setType("image/*");
@@ -149,6 +160,113 @@ public final class AppEditActivity extends Activity {
             startActivityForResult(intent, REQ_PICK_ICON);
         } catch (Exception e) {
             Toast.makeText(this, R.string.no_results, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void pickFromApps() {
+        android.content.pm.PackageManager pm = getPackageManager();
+        Intent main = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> apps = pm.queryIntentActivities(main, 0);
+        java.util.Collections.sort(apps, (x, y) -> String.valueOf(x.loadLabel(pm)).compareToIgnoreCase(String.valueOf(y.loadLabel(pm))));
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        for (android.content.pm.ResolveInfo ri : apps) labels.add(String.valueOf(ri.loadLabel(pm)));
+        showIconGrid(labels, i -> apps.get(i).loadIcon(pm));
+    }
+
+    private void pickFromPack() {
+        com.piko.launcher.core.IconPacks packs = com.piko.launcher.core.IconPacks.get(this);
+        java.util.List<String> names = packs.drawableNames();
+        if (names.isEmpty()) {
+            Toast.makeText(this, "Choose an icon pack in Settings first", Toast.LENGTH_LONG).show();
+            return;
+        }
+        showIconGrid(names, i -> packs.drawableByName(names.get(i)));
+    }
+
+    private interface DrawableAt {
+        android.graphics.drawable.Drawable get(int index);
+    }
+
+    /** Searchable grid of icons; tapping one renders it to a PNG and uses it as this app's icon. */
+    private void showIconGrid(java.util.List<String> labels, DrawableAt source) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(12), dp(12), dp(12), 0);
+        EditText filter = new EditText(this);
+        filter.setHint(R.string.search_hint);
+        filter.setSingleLine(true);
+        box.addView(filter);
+        android.widget.GridView grid = new android.widget.GridView(this);
+        grid.setNumColumns(5);
+        grid.setVerticalSpacing(dp(8));
+        box.addView(grid, new LinearLayout.LayoutParams(-1, dp(360)));
+
+        final java.util.List<Integer> shown = new java.util.ArrayList<>();
+        final AppEditActivity self = this;
+        android.widget.BaseAdapter adapter = new android.widget.BaseAdapter() {
+            @Override public int getCount() { return shown.size(); }
+            @Override public Object getItem(int p) { return shown.get(p); }
+            @Override public long getItemId(int p) { return p; }
+            @Override public View getView(int p, View v, android.view.ViewGroup parent) {
+                ImageView iv = v instanceof ImageView ? (ImageView) v : new ImageView(self);
+                iv.setLayoutParams(new android.widget.AbsListView.LayoutParams(dp(48), dp(48)));
+                iv.setPadding(dp(4), dp(4), dp(4), dp(4));
+                iv.setImageDrawable(source.get(shown.get(p)));
+                return iv;
+            }
+        };
+        Runnable refresh = () -> {
+            String q = filter.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            shown.clear();
+            for (int i = 0; i < labels.size(); i++) {
+                if (q.isEmpty() || labels.get(i).toLowerCase(java.util.Locale.ROOT).contains(q)) shown.add(i);
+            }
+            adapter.notifyDataSetChanged();
+        };
+        refresh.run();
+        grid.setAdapter(adapter);
+        filter.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence c, int a, int b, int d) { }
+            @Override public void onTextChanged(CharSequence c, int a, int b, int d) { refresh.run(); }
+            @Override public void afterTextChanged(android.text.Editable e) { }
+        });
+        android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this).setView(box).create();
+        grid.setOnItemClickListener((parent, view, position, id) -> {
+            android.graphics.drawable.Drawable d = source.get(shown.get(position));
+            if (d != null) applyPickedDrawable(d);
+            dialog.dismiss();
+        });
+        dialog.show();
+    }
+
+    private void applyPickedDrawable(android.graphics.drawable.Drawable d) {
+        int size = dp(96);
+        Bitmap bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        android.graphics.Canvas canvas = new android.graphics.Canvas(bmp);
+        d.setBounds(0, 0, size, size);
+        d.draw(canvas);
+        String path = saveBitmap(bmp);
+        if (path == null) {
+            Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        pendingIconPath = path;
+        IconCache.get(this).evict(null);
+        IconCache.get(this).load(new AppInfo(pkg, act, nameInput.getText().toString(), "", pendingIconPath), iconPreview, dp(72));
+    }
+
+    private String saveBitmap(Bitmap bitmap) {
+        try {
+            File dir = new File(getFilesDir(), "custom_icons");
+            if (!dir.exists()) dir.mkdirs();
+            // A fresh name per pick so the icon cache can't serve the previous image.
+            File outFile = new File(dir, key.replace("/", "_") + "_" + System.currentTimeMillis() + ".png");
+            try (OutputStream out = new FileOutputStream(outFile)) {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
+            }
+            return outFile.getAbsolutePath();
+        } catch (Exception e) {
+            return null;
         }
     }
 

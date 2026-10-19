@@ -12,6 +12,10 @@ public final class HomeItem {
 
     public static final int TYPE_APP = 0;
     public static final int TYPE_WIDGET = 1;
+    /** A pinned search action (call, message, web search, Piko action...) described by {@link #kind}/{@link #data}. */
+    public static final int TYPE_SHORTCUT = 2;
+    /** A second-level page: a titled group of apps ({@link #children} holds "pkg/activity" keys). */
+    public static final int TYPE_FOLDER = 3;
 
     public int type;
     public int page;
@@ -26,6 +30,13 @@ public final class HomeItem {
     public String packageName;
     public String activityName;
     public String label;
+
+    // TYPE_SHORTCUT (label is the title)
+    public String kind;
+    public String data;
+
+    // TYPE_FOLDER (label is the title)
+    public java.util.List<String> children = new java.util.ArrayList<>();
 
     // TYPE_WIDGET
     public int appWidgetId = -1;
@@ -50,6 +61,13 @@ public final class HomeItem {
             o.put("pkg", packageName);
             o.put("act", activityName);
             o.put("label", label);
+        } else if (type == TYPE_SHORTCUT) {
+            o.put("label", label);
+            o.put("kind", kind);
+            o.put("data", data);
+        } else if (type == TYPE_FOLDER) {
+            o.put("label", label);
+            o.put("children", new org.json.JSONArray(children));
         } else {
             o.put("widgetId", appWidgetId);
         }
@@ -70,6 +88,14 @@ public final class HomeItem {
             item.packageName = o.optString("pkg");
             item.activityName = o.optString("act");
             item.label = o.optString("label");
+        } else if (item.type == TYPE_SHORTCUT) {
+            item.label = o.optString("label");
+            item.kind = o.optString("kind");
+            item.data = o.optString("data");
+        } else if (item.type == TYPE_FOLDER) {
+            item.label = o.optString("label");
+            org.json.JSONArray arr = o.optJSONArray("children");
+            for (int i = 0; arr != null && i < arr.length(); i++) item.children.add(arr.optString(i));
         } else {
             item.appWidgetId = o.optInt("widgetId", -1);
         }

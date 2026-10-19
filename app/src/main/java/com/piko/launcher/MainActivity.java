@@ -20,8 +20,8 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.HorizontalScrollView;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.PopupMenu;
@@ -33,13 +33,12 @@ import com.piko.launcher.core.AppInfo;
 import com.piko.launcher.core.ContactIndexer;
 import com.piko.launcher.core.ContactInfo;
 import com.piko.launcher.core.HomeItem;
+import com.piko.launcher.core.IconCache;
 import com.piko.launcher.core.HomeLayoutStore;
 import com.piko.launcher.core.Prefs;
 import com.piko.launcher.core.SearchEngine;
 import com.piko.launcher.core.SearchLearningStore;
 import com.piko.launcher.core.SearchResult;
-import com.piko.launcher.core.ShortcutContact;
-import com.piko.launcher.core.ShortcutStore;
 import com.piko.launcher.core.UsageStore;
 import com.piko.launcher.ui.AppListAdapter;
 import com.piko.launcher.ui.HorizontalPager;
@@ -47,7 +46,6 @@ import com.piko.launcher.ui.SearchResultAdapter;
 import com.piko.launcher.ui.home.HomeGridLayout;
 import com.piko.launcher.ui.home.HomeIconViewFactory;
 import com.piko.launcher.ui.settings.SettingsActivity;
-import com.piko.launcher.ui.settings.ShortcutPickerActivity;
 import com.piko.launcher.ui.widget.WidgetHostController;
 import com.piko.launcher.ui.widget.WidgetPickerActivity;
 import com.piko.launcher.util.IntentUtil;
@@ -73,7 +71,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private Prefs prefs;
     private UsageStore usageStore;
-    private ShortcutStore shortcutStore;
     private HomeLayoutStore layoutStore;
     private SearchEngine searchEngine;
     private WidgetHostController widgetHostController;
@@ -90,8 +87,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private ListView resultsList;
     private TextView emptyText;
     private FrameLayout idleWidgetArea;
-    private HorizontalScrollView dockScroll;
-    private LinearLayout dockContainer;
     private SearchResultAdapter searchAdapter;
     private HomeGridLayout searchWidgetGrid;
 
@@ -111,7 +106,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         super.onCreate(savedInstanceState);
         prefs = Prefs.get(this);
         usageStore = UsageStore.get(this);
-        shortcutStore = ShortcutStore.get(this);
         layoutStore = HomeLayoutStore.get(this);
         searchEngine = new SearchEngine(usageStore, SearchLearningStore.get(this));
         widgetHostController = WidgetHostController.get(this);
@@ -170,7 +164,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         });
         buildOverviewBar();
 
-        pager.post(() -> pager.setCurrentItem(prefs.defaultPage(), false));
+        pager.post(() -> pager.setCurrentItem(Math.min(prefs.defaultPage(), gridPages.size()), false));
+        if (!prefs.isFirstRunDone()) startActivity(new Intent(this, com.piko.launcher.ui.settings.SetupActivity.class));
         pager.post(this::updateIndicatorInitial);
     }
 
@@ -180,10 +175,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         resultsList = page.findViewById(R.id.results_list);
         emptyText = page.findViewById(R.id.empty_text);
         idleWidgetArea = page.findViewById(R.id.idle_widget_area);
-        dockScroll = page.findViewById(R.id.dock_scroll);
-        dockContainer = page.findViewById(R.id.dock_container);
         ImageButton settingsButton = page.findViewById(R.id.btn_settings);
-        ImageButton moreButton = page.findViewById(R.id.btn_more);
 
         // The search bar is shared by every page, so it lives outside the pager.
         View searchBar = page.findViewById(R.id.search_bar);
@@ -279,11 +271,38 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 showAppOptionsMenu(v, result.app);
                 return true;
             }
+            if (result.type == SearchResult.TYPE_ACTION && result.shortcutKind != null) {
+                PopupMenu menu = new PopupMenu(this, v);
+                menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
+                menu.setOnMenuItemClickListener(m -> {
+                    HomeItem item = new HomeItem();
+                    item.type = HomeItem.TYPE_SHORTCUT;
+                    item.kind = result.shortcutKind;
+                    item.data = result.shortcutData;
+                    item.label = result.text;
+                    placeOnHome(item);
+                    return true;
+                });
+                menu.show();
+                return true;
+            }
             return false;
         });
 
+        searchInput.setOnKeyListener((v, code, ev) -> {
+            if (ev.getAction() != android.view.KeyEvent.ACTION_DOWN) return false;
+            int n = searchAdapter.getCount();
+            if (n == 0) return false;
+            int sel = searchAdapter.getSelected() < 0 ? n - 1 : searchAdapter.getSelected();
+            if (code == android.view.KeyEvent.KEYCODE_DPAD_UP) sel = Math.max(0, sel - 1);
+            else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) sel = Math.min(n - 1, sel + 1);
+            else return false;
+            searchAdapter.setSelected(sel);
+            resultsList.smoothScrollToPosition(sel);
+            return true;
+        });
+
         settingsButton.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
-        moreButton.setOnClickListener(this::showMoreMenu);
 
         return page;
     }
@@ -291,7 +310,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     /** Enter/search-action activates the top-ranked match — the one rendered nearest the search bar. */
     private void activateBestResult() {
         if (currentResults.isEmpty()) return;
-        SearchResult best = currentResults.get(0);
+        int sel = searchAdapter.getSelected();
+        SearchResult best = sel >= 0 && sel < searchAdapter.getCount() ? searchAdapter.getResultAt(sel) : currentResults.get(0);
         if (best.type == SearchResult.TYPE_APP) {
             launchApp(best.app);
         } else if (best.type == SearchResult.TYPE_ACTION) {
@@ -324,10 +344,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             @Override
             public int[] actionsFor(View child) {
                 HomeItem item = (HomeItem) child.getTag();
-                return item.type == HomeItem.TYPE_APP
-                        ? new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_UNINSTALL, HomeGridLayout.ACTION_INFO,
-                                HomeGridLayout.ACTION_EDIT, HomeGridLayout.ACTION_NAME}
-                        : new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_RESIZE};
+                if (item.type == HomeItem.TYPE_APP) {
+                    return new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_UNINSTALL, HomeGridLayout.ACTION_INFO,
+                            HomeGridLayout.ACTION_EDIT, HomeGridLayout.ACTION_NAME};
+                }
+                return item.type == HomeItem.TYPE_WIDGET
+                        ? new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_RESIZE}
+                        : new int[]{HomeGridLayout.ACTION_REMOVE};
             }
 
             @Override
@@ -414,10 +437,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void populateGridPage(HomeGridLayout grid, int pageIndex) {
         for (HomeItem item : homeItems) {
             if (item.page != pageIndex) continue;
-            if (item.type == HomeItem.TYPE_APP) {
-                View view = HomeIconViewFactory.createAppIcon(this, item);
-                view.setOnClickListener(v -> IntentUtil.launchApp(this, toAppInfo(item)));
-                grid.addView(view, paramsFor(grid, item));
+            if (item.type != HomeItem.TYPE_WIDGET) {
+                grid.addView(viewForItem(item), paramsFor(grid, item));
             } else {
                 AppWidgetProviderInfo info = widgetHostController.infoFor(item.appWidgetId);
                 if (info == null) continue;
@@ -500,16 +521,17 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 for (String engineId : prefs.enabledSearchEngines()) {
                     com.piko.launcher.core.WebSearchEngines.Engine e = prefs.engineById(engineId);
                     currentResults.add(SearchResult.forAction(e.label.substring(0, 1), getString(R.string.search_engine_for, e.label),
-                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)));
+                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)).pinnable("web", engineId));
                 }
             }
         }
         currentResults = explodeContacts(currentResults, query);
+        if (!idle && prefs.flag(Prefs.FLAG_QUICK_ACTIONS)) addQuickActions(query.trim());
 
         renderResults(idle);
     }
 
-    /** Turns each contact into one row per enabled action (call, SMS, WhatsApp…), keeping ranking order. */
+    /** Turns each contact into one row per enabled action (call, SMS, WhatsApp...), keeping ranking order. */
     private List<SearchResult> explodeContacts(List<SearchResult> in, String query) {
         List<SearchResult> out = new ArrayList<>();
         for (SearchResult r : in) {
@@ -521,27 +543,122 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             final String who = c.name.equals(c.phoneNumber) ? c.phoneNumber : c.name;
             final String sub = c.name.equals(c.phoneNumber) ? "" : c.phoneNumber;
             final String q = query;
-            if (prefs.flag(Prefs.FLAG_ACTION_CALL)) out.add(contactAction("☎", getString(R.string.act_call, who), sub, c, q,
+            if (prefs.flag(Prefs.FLAG_ACTION_CALL)) out.add(contactAction("call", c.phoneNumber, getString(R.string.act_call, who), sub, c, q,
                     () -> doCall(c.phoneNumber)));
-            if (prefs.flag(Prefs.FLAG_ACTION_SMS)) out.add(contactAction("✉", getString(R.string.act_sms, who), sub, c, q,
+            if (prefs.flag(Prefs.FLAG_ACTION_SMS)) out.add(contactAction("sms", c.phoneNumber, getString(R.string.act_sms, who), sub, c, q,
                     () -> IntentUtil.sendSms(this, c.phoneNumber)));
-            if (prefs.flag(Prefs.FLAG_ACTION_WA_MESSAGE)) out.add(contactAction("W", getString(R.string.act_wa_message, who), sub, c, q,
+            if (prefs.flag(Prefs.FLAG_ACTION_WA_MESSAGE)) out.add(contactAction("wa", c.phoneNumber, getString(R.string.act_wa_message, who), sub, c, q,
                     () -> IntentUtil.whatsAppMessage(this, c.phoneNumber)));
-            if (prefs.flag(Prefs.FLAG_ACTION_WA_CALL)) out.add(contactAction("W☎", getString(R.string.act_wa_call, who), sub, c, q,
+            if (prefs.flag(Prefs.FLAG_ACTION_WA_CALL)) out.add(contactAction("wacall", c.phoneNumber, getString(R.string.act_wa_call, who), sub, c, q,
                     () -> IntentUtil.whatsAppCall(this, c.phoneNumber, false)));
-            if (c.contactId >= 0) out.add(contactAction("i", getString(R.string.act_open_contact, who), sub, c, q,
+            if (c.contactId >= 0) out.add(contactAction("contact", String.valueOf(c.contactId), getString(R.string.act_open_contact, who), sub, c, q,
                     () -> IntentUtil.openContactInfo(this, c.contactId)));
-            out.add(contactAction("⧉", getString(R.string.act_copy_number, who), sub, c, q,
+            else out.add(contactAction("addcontact", c.phoneNumber, getString(R.string.act_add_contact), c.phoneNumber, c, q,
+                    () -> addToContacts(c.phoneNumber)));
+            out.add(contactAction("copy", c.phoneNumber, getString(R.string.act_copy_number, who), sub, c, q,
                     () -> IntentUtil.copyToClipboard(this, "number", c.phoneNumber)));
         }
         return out;
     }
 
-    private SearchResult contactAction(String badge, String title, String sub, ContactInfo c, String query, Runnable run) {
-        return SearchResult.forAction(badge, title, sub, () -> {
+    private void addToContacts(String number) {
+        Intent intent = new Intent(android.provider.ContactsContract.Intents.Insert.ACTION);
+        intent.setType(android.provider.ContactsContract.RawContacts.CONTENT_TYPE);
+        intent.putExtra(android.provider.ContactsContract.Intents.Insert.PHONE, number);
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private SearchResult contactAction(String kind, String data, String title, String sub, ContactInfo c, String query, Runnable run) {
+        return SearchResult.forAction(null, title, sub, () -> {
             run.run();
             if (c.contactId >= 0) searchEngine.recordChoice(query, SearchEngine.contactKey(c));
-        });
+        }).withIcon(HomeIconViewFactory.iconForKind(kind)).pinnable(kind, data);
+    }
+
+    // ---------------------------------------------------- piko quick actions
+
+    private static final String[][] PIKO_ACTIONS = {
+            {"settings", "Piko settings", "settings preferences options config"},
+            {"overview", "Edit home screen", "edit pages overview rearrange zoom organize"},
+            {"addpage", "Add page", "new page add"},
+            {"setdefault", "Make this page the default", "default home page start"},
+            {"hidenames", "Show or hide app names", "hide show names labels toggle"},
+            {"freeform", "Free-form or grid placement", "freeform grid snap placement toggle"},
+            {"iconpack", "Icon pack", "icon pack theme"},
+            {"hidden", "Hidden apps", "hidden apps hide"},
+            {"permissions", "Permissions", "permissions contacts access"},
+            {"setup", "Run setup again", "setup welcome first run"},
+    };
+
+    private void addQuickActions(String query) {
+        String q = query.toLowerCase(java.util.Locale.ROOT);
+        if (q.length() < 2) return;
+        String[] tokens = q.split("\\s+");
+        int at = 0;
+        for (int i = 0; i < currentResults.size(); i++) {
+            if (currentResults.get(i).type == SearchResult.TYPE_APP) at = i + 1;
+        }
+        for (String[] a : PIKO_ACTIONS) {
+            String hay = " " + a[1].toLowerCase(java.util.Locale.ROOT) + " " + a[2];
+            boolean all = true;
+            for (String t : tokens) if (!hay.contains(" " + t)) all = false;
+            if (!all) continue;
+            final String id = a[0];
+            currentResults.add(at++, SearchResult.forAction(null, a[1], "Piko", () -> runPikoAction(id))
+                    .withIcon(R.drawable.ic_bolt).pinnable("piko", id));
+        }
+    }
+
+    private void runPikoAction(String id) {
+        searchInput.setText("");
+        hideKeyboard();
+        switch (id) {
+            case "settings": startActivity(new Intent(this, SettingsActivity.class)); break;
+            case "overview": enterOverview(); break;
+            case "addpage": addPage(); break;
+            case "setdefault":
+                prefs.setDefaultPage(pager.getCurrentItem());
+                Toast.makeText(this, R.string.ov_default_set, Toast.LENGTH_SHORT).show();
+                break;
+            case "hidenames":
+                prefs.setHideAllLabels(!prefs.hideAllLabels());
+                prefs.bumpLayoutRevision();
+                recreate();
+                break;
+            case "freeform":
+                prefs.setFreeform(!prefs.freeform());
+                prefs.bumpLayoutRevision();
+                recreate();
+                break;
+            case "iconpack": startActivity(new Intent(this, com.piko.launcher.ui.settings.IconPackActivity.class)); break;
+            case "hidden": startActivity(new Intent(this, com.piko.launcher.ui.settings.HiddenAppsActivity.class)); break;
+            case "permissions": startActivity(new Intent(this, com.piko.launcher.ui.settings.PermissionsActivity.class)); break;
+            case "setup": startActivity(new Intent(this, com.piko.launcher.ui.settings.SetupActivity.class)); break;
+        }
+    }
+
+    /** Executes a pinned shortcut from the home screen. */
+    private void runShortcut(String kind, String data) {
+        switch (kind) {
+            case "call": doCall(data); break;
+            case "sms": IntentUtil.sendSms(this, data); break;
+            case "wa": IntentUtil.whatsAppMessage(this, data); break;
+            case "wacall": IntentUtil.whatsAppCall(this, data, false); break;
+            case "contact":
+                try {
+                    IntentUtil.openContactInfo(this, Long.parseLong(data));
+                } catch (NumberFormatException ignored) {
+                }
+                break;
+            case "copy": IntentUtil.copyToClipboard(this, "number", data); break;
+            case "addcontact": addToContacts(data); break;
+            case "web": IntentUtil.webSearch(this, data, ""); break;
+            case "piko": runPikoAction(data); break;
+        }
     }
 
     private boolean hasContactWithNumber(String typed) {
@@ -558,12 +675,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         List<SearchResult> display = new ArrayList<>(currentResults);
         Collections.reverse(display);
         searchAdapter.submit(display, searchInput.getText().toString());
+        if (!idle && !display.isEmpty()) searchAdapter.setSelected(display.size() - 1);
 
         boolean hasResults = !currentResults.isEmpty();
         resultsOverlay.setVisibility(idle ? View.GONE : View.VISIBLE);
         resultsList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
         emptyText.setVisibility(!hasResults ? View.VISIBLE : View.GONE);
-        refreshShortcutsRow(idle);
     }
 
     private void launchApp(AppInfo app) {
@@ -606,36 +723,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         return pageId == PAGE_SEARCH_WIDGETS ? searchWidgetGrid : gridPages.get(pageId);
     }
 
-    private void showMoreMenu(View anchor) {
-        PopupMenu menu = new PopupMenu(this, anchor);
-        menu.getMenu().add(0, 1, 0, R.string.menu_add_app);
-        menu.getMenu().add(0, 2, 1, R.string.menu_add_widget);
-        menu.getMenu().add(0, 3, 2, R.string.menu_manage_apps);
-        menu.setOnMenuItemClickListener(m -> {
-            int idx = pager.getCurrentItem();
-            int pageId = idx == 0 ? PAGE_SEARCH_WIDGETS : idx - 1;
-            if (m.getItemId() == 3) {
-                showAppChooser((app, v, dialog) -> showAppOptionsMenu(v, app));
-                return true;
-            }
-            int[] free = findFreeArea(gridForPage(pageId), 1, 1);
-            if (free == null) {
-                Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
-                return true;
-            }
-            if (m.getItemId() == 1) {
-                showAppPickerDialog(pageId, free[0], free[1]);
-            } else {
-                pendingWidgetPage = pageId;
-                pendingWidgetCol = free[0];
-                pendingWidgetRow = free[1];
-                startActivityForResult(new Intent(this, WidgetPickerActivity.class), REQ_PICK_WIDGET_PROVIDER);
-            }
-            return true;
-        });
-        menu.show();
-    }
-
     private void showAddItemMenu(HomeGridLayout grid, int pageIndex, int col, int row) {
         PopupMenu menu = new PopupMenu(this, grid);
         menu.getMenu().add(0, 1, 0, R.string.menu_add_app);
@@ -655,30 +742,51 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void addAppToFirstFreeCell(AppInfo app) {
-        for (int p = 0; p < gridPages.size(); p++) {
+        HomeItem item = new HomeItem();
+        item.type = HomeItem.TYPE_APP;
+        item.packageName = app.packageName;
+        item.activityName = app.activityName;
+        item.label = app.label;
+        placeOnHome(item);
+    }
+
+    /** Puts a new item in the first free cell, preferring the page the user is looking at. */
+    private void placeOnHome(HomeItem item) {
+        int current = pager.getCurrentItem() - 1;
+        for (int n = 0; n < gridPages.size(); n++) {
+            int p = current >= 0 ? (current + n) % gridPages.size() : n;
             HomeGridLayout grid = gridPages.get(p);
-            for (int r = 0; r < grid.getRows(); r++) {
-                for (int c = 0; c < grid.getColumns(); c++) {
-                    if (grid.isAreaFree(c, r, 1, 1, null)) {
-                        HomeItem item = new HomeItem();
-                        item.type = HomeItem.TYPE_APP;
-                        item.page = p;
-                        item.col = c;
-                        item.row = r;
-                        item.packageName = app.packageName;
-                        item.activityName = app.activityName;
-                        item.label = app.label;
-                        homeItems.add(item);
-                        layoutStore.saveAll(homeItems);
-                        View view = HomeIconViewFactory.createAppIcon(this, item);
-                        view.setOnClickListener(v -> IntentUtil.launchApp(this, toAppInfo(item)));
-                        grid.addView(view, grid.gridParams(c, r, 1, 1));
-                        Toast.makeText(this, R.string.menu_add_to_home, Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                }
-            }
+            int[] cell = findFreeArea(grid, 1, 1);
+            if (cell == null) continue;
+            item.page = p;
+            item.col = cell[0];
+            item.row = cell[1];
+            homeItems.add(item);
+            layoutStore.saveAll(homeItems);
+            grid.addView(viewForItem(item), grid.gridParams(cell[0], cell[1], 1, 1));
+            Toast.makeText(this, R.string.menu_add_to_home, Toast.LENGTH_SHORT).show();
+            return;
         }
+        Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+    }
+
+    /** Builds and wires the home view for an app, shortcut or folder item. */
+    private View viewForItem(HomeItem item) {
+        View view;
+        switch (item.type) {
+            case HomeItem.TYPE_SHORTCUT:
+                view = HomeIconViewFactory.createShortcut(this, item);
+                view.setOnClickListener(v -> runShortcut(item.kind, item.data));
+                break;
+            case HomeItem.TYPE_FOLDER:
+                view = HomeIconViewFactory.createFolder(this, item);
+                view.setOnClickListener(v -> openFolder(item, view));
+                break;
+            default:
+                view = HomeIconViewFactory.createAppIcon(this, item);
+                view.setOnClickListener(v -> IntentUtil.launchApp(this, toAppInfo(item)));
+        }
+        return view;
     }
 
     private interface AppChooserListener {
@@ -712,8 +820,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         EditText input = dialogView.findViewById(R.id.search_input);
         ListView list = dialogView.findViewById(R.id.results_list);
         dialogView.findViewById(R.id.btn_settings).setVisibility(View.GONE);
-        dialogView.findViewById(R.id.btn_more).setVisibility(View.GONE);
-        dialogView.findViewById(R.id.dock_scroll).setVisibility(View.GONE);
         dialogView.findViewById(R.id.idle_widget_area).setVisibility(View.GONE);
 
         AppListAdapter adapter = new AppListAdapter(this);
@@ -868,6 +974,138 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         return null;
     }
 
+    // ------------------------------------------------------------- folders
+
+    private AppInfo appForKey(String key) {
+        for (AppInfo a : rawApps) if (a.key().equals(key)) return a;
+        int slash = key.indexOf('/');
+        return slash < 0 ? null : new AppInfo(key.substring(0, slash), key.substring(slash + 1), key.substring(0, slash));
+    }
+
+    private void renameItem(HomeItem item, View child) {
+        EditText input = new EditText(this);
+        input.setText(item.label);
+        input.setSingleLine(true);
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.menu_rename)
+                .setView(input)
+                .setPositiveButton(R.string.action_save, (d, w) -> {
+                    String name = input.getText().toString().trim();
+                    if (name.isEmpty()) return;
+                    item.label = name;
+                    layoutStore.saveAll(homeItems);
+                    TextView label = child.findViewById(R.id.label);
+                    if (label != null) label.setText(name);
+                })
+                .setNegativeButton(R.string.action_cancel, null)
+                .show();
+    }
+
+    /** Pick an existing folder (or a new one) to move this app into. */
+    private void chooseFolder(HomeGridLayout grid, HomeItem app, View child) {
+        List<HomeItem> folders = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        for (HomeItem it : homeItems) {
+            if (it.type == HomeItem.TYPE_FOLDER) {
+                folders.add(it);
+                names.add(it.label);
+            }
+        }
+        names.add(getString(R.string.new_folder));
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.menu_add_to_folder)
+                .setItems(names.toArray(new String[0]), (d, which) -> {
+                    String key = app.packageName + "/" + app.activityName;
+                    if (which < folders.size()) {
+                        folders.get(which).children.add(key);
+                        removeHomeItem(grid, app, child);
+                        layoutStore.saveAll(homeItems);
+                        return;
+                    }
+                    HomeItem folder = new HomeItem();
+                    folder.type = HomeItem.TYPE_FOLDER;
+                    folder.label = getString(R.string.folder_default_name);
+                    folder.page = app.page;
+                    folder.col = app.col;
+                    folder.row = app.row;
+                    folder.fx = app.fx;
+                    folder.fy = app.fy;
+                    folder.children.add(key);
+                    removeHomeItem(grid, app, child);
+                    homeItems.add(folder);
+                    layoutStore.saveAll(homeItems);
+                    View fv = viewForItem(folder);
+                    grid.addView(fv, paramsFor(grid, folder));
+                    renameItem(folder, fv);
+                })
+                .show();
+    }
+
+    private void openFolder(HomeItem folder, View anchor) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(16), dp(16), dp(16), dp(8));
+        android.widget.GridLayout gridView = new android.widget.GridLayout(this);
+        gridView.setColumnCount(4);
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle(folder.label).setView(box).create();
+        int size = dp(36);
+        for (String key : new ArrayList<>(folder.children)) {
+            AppInfo app = appForKey(key);
+            if (app == null) continue;
+            View cell = LayoutInflater.from(this).inflate(R.layout.view_home_icon, null, false);
+            IconCache.get(this).load(app, (ImageView) cell.findViewById(R.id.icon), size);
+            ((TextView) cell.findViewById(R.id.label)).setText(app.label);
+            ((TextView) cell.findViewById(R.id.label)).setMaxWidth(dp(64));
+            cell.setBackgroundResource(R.drawable.bg_pressable);
+            cell.setPadding(dp(6), dp(6), dp(6), dp(6));
+            cell.setOnClickListener(v -> {
+                dialog.dismiss();
+                IntentUtil.launchApp(this, app);
+            });
+            cell.setOnLongClickListener(v -> {
+                PopupMenu menu = new PopupMenu(this, v);
+                menu.getMenu().add(0, 1, 0, R.string.menu_remove_from_folder);
+                menu.getMenu().add(0, 2, 1, R.string.menu_app_info);
+                menu.setOnMenuItemClickListener(m -> {
+                    if (m.getItemId() == 1) {
+                        folder.children.remove(key);
+                        layoutStore.saveAll(homeItems);
+                        dialog.dismiss();
+                        HomeItem item = new HomeItem();
+                        item.type = HomeItem.TYPE_APP;
+                        item.packageName = app.packageName;
+                        item.activityName = app.activityName;
+                        item.label = app.label;
+                        placeOnHome(item);
+                    } else {
+                        IntentUtil.openAppInfo(this, app.packageName);
+                    }
+                    return true;
+                });
+                menu.show();
+                return true;
+            });
+            gridView.addView(cell);
+        }
+        box.addView(gridView);
+        TextView add = new TextView(this);
+        add.setText(R.string.folder_add_app);
+        add.setTextColor(getResources().getColor(R.color.piko_accent));
+        add.setPadding(dp(4), dp(14), dp(4), dp(6));
+        add.setOnClickListener(v -> {
+            dialog.dismiss();
+            showAppChooser((app, view, picker) -> {
+                String key = app.packageName + "/" + app.activityName;
+                if (!folder.children.contains(key)) folder.children.add(key);
+                layoutStore.saveAll(homeItems);
+                picker.dismiss();
+                openFolder(folder, anchor);
+            });
+        });
+        box.addView(add);
+        dialog.show();
+    }
+
     private void showHomeItemMenu(HomeGridLayout grid, View child) {
         HomeItem item = (HomeItem) child.getTag();
         PopupMenu menu = new PopupMenu(this, child);
@@ -878,6 +1116,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         final int idResize = item.type == HomeItem.TYPE_WIDGET ? ++id : -1;
         final int idName = item.type == HomeItem.TYPE_APP ? ++id : -1;
         final int idMovePage = gridPages.size() > 1 ? ++id : -1;
+        final int idFolder = item.type == HomeItem.TYPE_APP ? ++id : -1;
+        final int idRename = item.type == HomeItem.TYPE_FOLDER || item.type == HomeItem.TYPE_SHORTCUT ? ++id : -1;
         final int idRemove = ++id;
 
         if (idInfo != -1) menu.getMenu().add(0, idInfo, 0, R.string.menu_app_info);
@@ -887,6 +1127,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (idName != -1) menu.getMenu().add(0, idName, 3, com.piko.launcher.core.AppCustomizationStore.get(this)
                 .hidesLabel(item.packageName + "/" + item.activityName) ? R.string.menu_show_name : R.string.menu_hide_name);
         if (idMovePage != -1) menu.getMenu().add(0, idMovePage, 4, R.string.menu_add_to_home);
+        if (idFolder != -1) menu.getMenu().add(0, idFolder, 4, R.string.menu_add_to_folder);
+        if (idRename != -1) menu.getMenu().add(0, idRename, 1, R.string.menu_rename);
         menu.getMenu().add(0, idRemove, 5, R.string.menu_remove_from_home);
 
         menu.setOnMenuItemClickListener(m -> {
@@ -903,6 +1145,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 toggleLabel(child, item);
             } else if (clicked == idMovePage) {
                 showMovePagePicker(grid, item, child);
+            } else if (clicked == idFolder) {
+                chooseFolder(grid, item, child);
+            } else if (clicked == idRename) {
+                renameItem(item, child);
             } else if (clicked == idRemove) {
                 confirmRemoveHomeItem(grid, item, child);
             }
@@ -969,16 +1215,21 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
-        row.addView(ovButton("＋", R.string.ov_add_page, v -> addPage()));
-        row.addView(ovButton("🗑", R.string.ov_delete_page, v -> deletePage()));
-        row.addView(ovButton("◀", R.string.ov_move_left, v -> movePage(-1)));
-        row.addView(ovButton("▶", R.string.ov_move_right, v -> movePage(1)));
-        row.addView(ovButton("▦", R.string.ov_tidy, v -> tidyPage()));
-        row.addView(ovButton("⊕", R.string.ov_add_item, v -> {
+        row.addView(ovButton(R.drawable.ic_add, R.string.ov_add_page, v -> addPage()));
+        row.addView(ovButton(R.drawable.ic_trash, R.string.ov_delete_page, v -> deletePage()));
+        row.addView(ovButton(R.drawable.ic_left, R.string.ov_move_left, v -> movePage(-1)));
+        row.addView(ovButton(R.drawable.ic_right, R.string.ov_move_right, v -> movePage(1)));
+        row.addView(ovButton(R.drawable.ic_grid, R.string.ov_tidy, v -> tidyPage()));
+        row.addView(ovButton(R.drawable.ic_home, R.string.ov_set_default, v -> {
+            prefs.setDefaultPage(pager.getCurrentItem());
+            updateOverviewTitle();
+            Toast.makeText(this, R.string.ov_default_set, Toast.LENGTH_SHORT).show();
+        }));
+        row.addView(ovButton(R.drawable.ic_add_circle, R.string.ov_add_item, v -> {
             int g = pager.getCurrentItem() - 1;
             if (g >= 0) showAddItemMenu(gridPages.get(g), g, 0, 0);
         }));
-        row.addView(ovButton("✓", R.string.ov_done, v -> exitOverview()));
+        row.addView(ovButton(R.drawable.ic_check, R.string.ov_done, v -> exitOverview()));
         overviewBar.addView(row);
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
@@ -986,17 +1237,16 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ((FrameLayout) findViewById(R.id.root)).addView(overviewBar, lp);
     }
 
-    private View ovButton(String glyph, int label, View.OnClickListener click) {
+    private View ovButton(int iconRes, int label, View.OnClickListener click) {
         LinearLayout b = new LinearLayout(this);
         b.setOrientation(LinearLayout.VERTICAL);
         b.setGravity(android.view.Gravity.CENTER);
         b.setBackgroundResource(R.drawable.bg_pressable);
         b.setPadding(0, dp(6), 0, dp(6));
-        TextView g = new TextView(this);
-        g.setText(glyph);
-        g.setTextSize(20);
-        g.setTextColor(getResources().getColor(R.color.piko_text_primary));
-        g.setGravity(android.view.Gravity.CENTER);
+        ImageView g = new ImageView(this);
+        g.setImageResource(iconRes);
+        g.setColorFilter(getResources().getColor(R.color.piko_text_primary));
+        g.setLayoutParams(new LinearLayout.LayoutParams(dp(20), dp(20)));
         TextView t = new TextView(this);
         t.setText(label);
         t.setTextSize(10.5f);
@@ -1034,7 +1284,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void updateOverviewTitle() {
         if (overviewTitle == null) return;
         int idx = pager.getCurrentItem();
-        overviewTitle.setText(idx == 0 ? "Search page" : "Page " + idx + " of " + gridPages.size());
+        String name = idx == 0 ? "Search page" : "Page " + idx + " of " + gridPages.size();
+        overviewTitle.setText(idx == prefs.defaultPage() ? name + " · default" : name);
     }
 
     /** Rebuilds every grid page from {@link #homeItems} after a structural change, then focuses one. */
@@ -1193,43 +1444,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     // ---------------------------------------------------------- shortcuts row
 
-    /** Below the search bar, idle-only: quick-contact shortcuts. */
-    private void refreshShortcutsRow(boolean idle) {
-        dockContainer.removeAllViews();
-        if (!idle) {
-            dockScroll.setVisibility(View.GONE);
-            return;
-        }
-
-        List<ShortcutContact> shortcuts = shortcutStore.loadAll();
-        for (ShortcutContact contact : shortcuts) {
-            View chip = LayoutInflater.from(this).inflate(R.layout.item_dock_shortcut, dockContainer, false);
-            TextView avatar = chip.findViewById(R.id.avatar);
-            TextView name = chip.findViewById(R.id.name);
-            name.setText(contact.name);
-            avatar.setText(initials(contact.name));
-
-            View btnCall = chip.findViewById(R.id.btn_call);
-            View btnSms = chip.findViewById(R.id.btn_sms);
-            View btnWaMessage = chip.findViewById(R.id.btn_wa_message);
-            View btnWaCall = chip.findViewById(R.id.btn_wa_call);
-
-            btnCall.setVisibility(contact.has(ShortcutContact.ACTION_CALL) ? View.VISIBLE : View.GONE);
-            btnSms.setVisibility(contact.has(ShortcutContact.ACTION_SMS) ? View.VISIBLE : View.GONE);
-            btnWaMessage.setVisibility(contact.has(ShortcutContact.ACTION_WA_MESSAGE) ? View.VISIBLE : View.GONE);
-            btnWaCall.setVisibility(contact.has(ShortcutContact.ACTION_WA_CALL) ? View.VISIBLE : View.GONE);
-
-            btnCall.setOnClickListener(v -> doCall(contact.phoneNumber));
-            btnSms.setOnClickListener(v -> IntentUtil.sendSms(this, contact.phoneNumber));
-            btnWaMessage.setOnClickListener(v -> IntentUtil.whatsAppMessage(this, contact.phoneNumber));
-            btnWaCall.setOnClickListener(v -> IntentUtil.whatsAppCall(this, contact.phoneNumber, false));
-
-            dockContainer.addView(chip);
-        }
-
-        dockScroll.setVisibility(shortcuts.isEmpty() ? View.GONE : View.VISIBLE);
-    }
-
     private String initials(String name) {
         if (name == null || name.isEmpty()) return "?";
         return name.trim().substring(0, 1).toUpperCase();
@@ -1316,17 +1530,17 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (pager != null) pager.setCurrentItem(prefs.defaultPage(), false);
+        if (pager != null) pager.setCurrentItem(Math.min(prefs.defaultPage(), gridPages.size()), false);
         if (searchInput != null) {
             searchInput.setText("");
-            if (prefs.defaultPage() == Prefs.DEFAULT_PAGE_SEARCH) focusSearch();
+            if (prefs.defaultPage() == Prefs.DEFAULT_PAGE_SEARCH && prefs.autoFocusKeyboard()) focusSearch();
         }
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus && prefs.defaultPage() == Prefs.DEFAULT_PAGE_SEARCH
+        if (hasFocus && prefs.defaultPage() == Prefs.DEFAULT_PAGE_SEARCH && prefs.autoFocusKeyboard()
                 && pager != null && pager.getCurrentItem() == Prefs.DEFAULT_PAGE_SEARCH) {
             focusSearch();
         }
