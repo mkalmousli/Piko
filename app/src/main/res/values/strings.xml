@@ -67,4 +67,27 @@
     <string name="settings_search_open">Search settings ›</string>
     <string name="drop_to_remove">Drop here to remove</string>
     <string name="resize_hint">Drag the corner handle to resize, tap outside to finish</string>
+    <string name="search_engine_for">Search %1$s</string>
+    <string name="act_call">Call %1$s</string>
+    <string name="act_sms">Message %1$s</string>
+    <string name="act_wa_message">WhatsApp %1$s</string>
+    <string name="act_wa_call">WhatsApp call %1$s</string>
+    <string name="act_open_contact">Open %1$s</string>
+    <string name="act_copy_number">Copy number of %1$s</string>
+    <string name="hide_name_on_home">Hide name on home screen</string>
+    <string name="act_remove">Remove</string>
+    <string name="act_uninstall">Uninstall</string>
+    <string name="act_info">Info</string>
+    <string name="act_edit">Edit</string>
+    <string name="act_resize">Resize</string>
+    <string name="act_name">Name</string>
+    <string name="ov_add_page">Page</string>
+    <string name="ov_delete_page">Delete</string>
+    <string name="ov_move_left">Left</string>
+    <string name="ov_move_right">Right</string>
+    <string name="ov_tidy">Tidy</string>
+    <string name="ov_add_item">Add</string>
+    <string name="ov_done">Done</string>
+    <string name="menu_hide_name">Hide name</string>
+    <string name="menu_show_name">Show name</string>
 </resources>

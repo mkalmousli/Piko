@@ -45,7 +45,7 @@
                 android:textColor="@color/piko_text_primary"
                 android:textSize="15sp" />
 
-            <ImageButton android:id="@+id/btn_columns_minus" style="@style/StepperButton" android:src="@drawable/ic_add" android:rotation="45" />
+            <ImageButton android:id="@+id/btn_columns_minus" style="@style/StepperButton" android:src="@drawable/ic_minus" />
             <TextView android:id="@+id/text_columns" style="@style/StepperValue" />
             <ImageButton android:id="@+id/btn_columns_plus" style="@style/StepperButton" android:src="@drawable/ic_add" />
         </LinearLayout>
@@ -65,7 +65,7 @@
                 android:textColor="@color/piko_text_primary"
                 android:textSize="15sp" />
 
-            <ImageButton android:id="@+id/btn_rows_minus" style="@style/StepperButton" android:src="@drawable/ic_add" android:rotation="45" />
+            <ImageButton android:id="@+id/btn_rows_minus" style="@style/StepperButton" android:src="@drawable/ic_minus" />
             <TextView android:id="@+id/text_rows" style="@style/StepperValue" />
             <ImageButton android:id="@+id/btn_rows_plus" style="@style/StepperButton" android:src="@drawable/ic_add" />
         </LinearLayout>
@@ -85,7 +85,7 @@
                 android:textColor="@color/piko_text_primary"
                 android:textSize="15sp" />
 
-            <ImageButton android:id="@+id/btn_pages_minus" style="@style/StepperButton" android:src="@drawable/ic_add" android:rotation="45" />
+            <ImageButton android:id="@+id/btn_pages_minus" style="@style/StepperButton" android:src="@drawable/ic_minus" />
             <TextView android:id="@+id/text_pages" style="@style/StepperValue" />
             <ImageButton android:id="@+id/btn_pages_plus" style="@style/StepperButton" android:src="@drawable/ic_add" />
         </LinearLayout>

@@ -78,7 +78,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     @Override
     public int getViewTypeCount() {
-        return 4;
+        return 5;
     }
 
     @Override
@@ -89,7 +89,7 @@ public final class SearchResultAdapter extends BaseAdapter {
     @Override
     public boolean isEnabled(int position) {
         int type = items.get(position).type;
-        return type == SearchResult.TYPE_APP || type == SearchResult.TYPE_CALC || type == SearchResult.TYPE_WEB;
+        return type != SearchResult.TYPE_CONTACT;
     }
 
     @Override
@@ -102,6 +102,8 @@ public final class SearchResultAdapter extends BaseAdapter {
                 return getCalcView(result, convertView, parent);
             case SearchResult.TYPE_WEB:
                 return getWebView(result, convertView, parent);
+            case SearchResult.TYPE_ACTION:
+                return getActionView(result, convertView, parent);
             default:
                 return getContactView(result, convertView, parent);
         }
@@ -121,6 +123,26 @@ public final class SearchResultAdapter extends BaseAdapter {
         }
         holder.label.setText(TextHighlighter.highlight(context, result.app.label, currentQuery));
         iconCache.load(result.app, holder.icon, iconSizePx);
+        return view;
+    }
+
+    private View getActionView(SearchResult result, View convertView, ViewGroup parent) {
+        View view = convertView;
+        ActionHolder holder;
+        if (view == null || !(view.getTag() instanceof ActionHolder)) {
+            view = LayoutInflater.from(context).inflate(R.layout.list_item_action, parent, false);
+            holder = new ActionHolder();
+            holder.badge = view.findViewById(R.id.badge);
+            holder.title = view.findViewById(R.id.title);
+            holder.subtitle = view.findViewById(R.id.subtitle);
+            view.setTag(holder);
+        } else {
+            holder = (ActionHolder) view.getTag();
+        }
+        holder.badge.setText(result.badge);
+        holder.title.setText(TextHighlighter.highlight(context, result.text, currentQuery));
+        holder.subtitle.setText(result.subtitle);
+        holder.subtitle.setVisibility(result.subtitle == null || result.subtitle.isEmpty() ? View.GONE : View.VISIBLE);
         return view;
     }
 
@@ -251,6 +273,10 @@ public final class SearchResultAdapter extends BaseAdapter {
     private static final class AppHolder {
         ImageView icon;
         TextView label;
+    }
+
+    private static final class ActionHolder {
+        TextView badge, title, subtitle;
     }
 
     private static final class CalcHolder {

@@ -43,22 +43,26 @@ reach a clean, configurable icon grid. That's it.
 - **Phone numbers**: typing digits matches contacts by number and offers call/message for numbers not in your address book.
 
 **Instant answers**
+- Scientific calculator: `2(3+4)^2`, `sqrt(16)+3!`, `sin(30deg)`, `50% of 200`, `10 mod 3`, `log2(8)`, constants `pi`/`e`.
 - **Calculator** inline: `12*8+4` → `100`; any number you type gets a calculator row.
 - **Currency conversion** inline: `100 usd to eur` (live ECB rates via [Frankfurter](https://www.frankfurter.app)).
 
 **Home screen**
 - Long-press an icon to lift it, then drag: a highlighted drop target shows where it lands, occupied cells swap, drag to the top strip to remove, or release without moving for the item menu.
 - Hold an icon at a screen edge to carry it to the next page (a new page is created past the last one).
-- Long-press an empty cell to add an app or widget.
+- **Free-form placement**: icons and widgets sit exactly where you drop them (switch to snap-to-grid in Settings).
+- Long-press empty space to **zoom out** into page overview: add, delete, reorder pages, tidy a page onto the grid, or add apps/widgets.
+- Drag an icon to the bar at the top to remove, uninstall, open app info, edit, or toggle its name.
+- Hide app names globally or per app.
 - 3D page swing between pages, rubber-band overscroll and haptic feedback.
 
 **Web & AI in one tap**
-- "Search the web" row with a button per engine: Google, Brave, DuckDuckGo, Bing, ChatGPT, Claude, Perplexity.
+- One result row per engine: Google, Brave, DuckDuckGo, Bing, ChatGPT, Claude, Perplexity.
 - Enable, reorder, or add your **own engine or AI chat** from any URL with a query parameter.
 
 **Contacts**
 - Search contacts by name or **by phone number**.
-- Per-result buttons for **Call, SMS, WhatsApp message and WhatsApp call** (each can be switched off).
+- Every contact action (**Call, SMS, WhatsApp message, WhatsApp call**, open, copy) is its own result row; each can be switched off.
 - Choose what tapping a result does; copy numbers; optional direct-call mode that skips the dialer.
 - Contacts are optional: decline the permission and everything else still works.
 

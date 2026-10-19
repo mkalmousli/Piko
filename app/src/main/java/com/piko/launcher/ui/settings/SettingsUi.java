@@ -50,15 +50,15 @@ public final class SettingsUi {
         bar.setElevation(4 * d);
         bar.setBackgroundColor(activity.getResources().getColor(R.color.piko_bg));
 
-        TextView back = new TextView(activity);
-        back.setText("←");
-        back.setTextSize(24);
-        back.setGravity(Gravity.CENTER);
-        back.setTextColor(activity.getResources().getColor(R.color.piko_text_primary));
-        back.setBackgroundResource(R.drawable.bg_pressable);
+        android.widget.ImageView back = new android.widget.ImageView(activity);
+        back.setImageResource(R.drawable.ic_back);
+        back.setScaleType(android.widget.ImageView.ScaleType.CENTER);
+        back.setBackgroundResource(R.drawable.bg_icon_button);
         back.setContentDescription("Back");
         back.setOnClickListener(v -> activity.onBackPressed());
-        bar.addView(back, new LinearLayout.LayoutParams((int) (56 * d), (int) (56 * d)));
+        LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams((int) (44 * d), (int) (44 * d));
+        backLp.setMargins((int) (8 * d), 0, (int) (8 * d), 0);
+        bar.addView(back, backLp);
 
         TextView t = new TextView(activity);
         t.setText(title);

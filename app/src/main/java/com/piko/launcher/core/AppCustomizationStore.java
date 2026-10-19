@@ -35,6 +35,7 @@ public final class AppCustomizationStore {
         public String label;
         public String tags = "";
         public String iconPath;
+        public boolean hideLabel;
     }
 
     public Entry get(String key) {
@@ -46,6 +47,7 @@ public final class AppCustomizationStore {
             e.label = o.optString("label", null);
             e.tags = o.optString("tags", "");
             e.iconPath = o.optString("iconPath", null);
+            e.hideLabel = o.optBoolean("hideLabel", false);
             return e;
         } catch (JSONException e) {
             return null;
@@ -53,8 +55,25 @@ public final class AppCustomizationStore {
     }
 
     public void save(String key, String label, String tags, String iconPath) {
+        Entry old = get(key);
+        save(key, label, tags, iconPath, old != null && old.hideLabel);
+    }
+
+    public boolean hidesLabel(String key) {
+        Entry e = get(key);
+        return e != null && e.hideLabel;
+    }
+
+    public void setHideLabel(String key, boolean hide) {
+        Entry e = get(key);
+        if (e == null) save(key, null, "", null, hide);
+        else save(key, e.label, e.tags, e.iconPath, hide);
+    }
+
+    public void save(String key, String label, String tags, String iconPath, boolean hideLabel) {
         JSONObject o = new JSONObject();
         try {
+            if (hideLabel) o.put("hideLabel", true);
             if (label != null) o.put("label", label);
             o.put("tags", tags == null ? "" : tags);
             if (iconPath != null) o.put("iconPath", iconPath);

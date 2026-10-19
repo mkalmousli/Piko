@@ -34,6 +34,10 @@ public final class HomeGridLayout extends ViewGroup {
         void onEmptyCellLongPress(int col, int row);
         void onItemMoved(View child, int newCol, int newRow);
         void onItemRemoveRequested(View child);
+        /** Action ids (ACTION_*) offered in the bar that appears at the top while an item is dragged. */
+        int[] actionsFor(View child);
+        /** The item was dropped on one of the action tiles. */
+        void onItemAction(View child, int action);
         /** An occupant was long-pressed and released without being dragged: show its menu. */
         void onItemLongPress(View child);
         /** A visual resize gesture changed an occupant's span; persist it. */
@@ -45,7 +49,13 @@ public final class HomeGridLayout extends ViewGroup {
         HomeGridLayout onItemDragToPage(View child, int direction);
     }
 
+    public static final int ACTION_REMOVE = 1, ACTION_UNINSTALL = 2, ACTION_INFO = 3,
+            ACTION_EDIT = 4, ACTION_RESIZE = 5, ACTION_NAME = 6;
+
     private final int columns;
+    private boolean freeform;
+    private int[] actions;
+    private int activeAction;
     private final int rows;
     private Callbacks callbacks;
 
@@ -109,6 +119,26 @@ public final class HomeGridLayout extends ViewGroup {
         removeLabel = "✕  " + context.getString(com.piko.launcher.R.string.drop_to_remove);
     }
 
+    public void setFreeform(boolean freeform) {
+        this.freeform = freeform;
+    }
+
+    private int leftOf(GridLayoutParams lp) {
+        if (freeform && lp.fx >= 0) {
+            int w = lp.colSpan * cellW;
+            return Math.max(0, Math.min(getMeasuredWidth() - w, Math.round(lp.fx * getMeasuredWidth())));
+        }
+        return lp.col * cellW;
+    }
+
+    private int topOf(GridLayoutParams lp) {
+        if (freeform && lp.fy >= 0) {
+            int h = lp.rowSpan * cellH;
+            return Math.max(0, Math.min(getMeasuredHeight() - h, Math.round(lp.fy * getMeasuredHeight())));
+        }
+        return lp.row * cellH;
+    }
+
     public void setCallbacks(Callbacks callbacks) {
         this.callbacks = callbacks;
     }
@@ -162,8 +192,8 @@ public final class HomeGridLayout extends ViewGroup {
 
     private RectF resizeRect() {
         GridLayoutParams lp = (GridLayoutParams) resizeView.getLayoutParams();
-        return new RectF(lp.col * cellW, lp.row * cellH,
-                (lp.col + lp.colSpan) * cellW, (lp.row + lp.rowSpan) * cellH);
+        int l = leftOf(lp), t = topOf(lp);
+        return new RectF(l, t, l + lp.colSpan * cellW, t + lp.rowSpan * cellH);
     }
 
     private float handleRadius() {
@@ -173,7 +203,7 @@ public final class HomeGridLayout extends ViewGroup {
     @Override
     protected void dispatchDraw(Canvas canvas) {
         float density = getResources().getDisplayMetrics().density;
-        if (draggingView != null && dropTarget != null && dropTarget.valid) {
+        if (draggingView != null && !freeform && dropTarget != null && dropTarget.valid) {
             tmpRect.set(dropTarget.col * cellW, dropTarget.row * cellH,
                     (dropTarget.col + spanOf(draggingView, true)) * cellW,
                     (dropTarget.row + spanOf(draggingView, false)) * cellH);
@@ -188,13 +218,7 @@ public final class HomeGridLayout extends ViewGroup {
         }
         super.dispatchDraw(canvas);
         if (draggingView != null) {
-            if (removeArmed) {
-                fillPaint.setColor(inRemoveZone ? 0xCCE53935 : 0x66E53935);
-                float h = removeZoneHeight();
-                canvas.drawRect(0, 0, getWidth(), h, fillPaint);
-                canvas.drawText(removeLabel, getWidth() / 2f, h / 2f + 4 * density, textPaint);
-                fillPaint.setColor(0x337C9CFF);
-            }
+            if (actions != null && actions.length > 0) drawActionBar(canvas, density);
             if (edgeDirection != 0) {
                 float w = 20 * density;
                 fillPaint.setColor(0x557C9CFF);
@@ -212,14 +236,62 @@ public final class HomeGridLayout extends ViewGroup {
         fillPaint.setColor(0x337C9CFF);
     }
 
+    private static String actionGlyph(int a) {
+        switch (a) {
+            case ACTION_REMOVE: return "✕";
+            case ACTION_UNINSTALL: return "⊖";
+            case ACTION_INFO: return "ⓘ";
+            case ACTION_EDIT: return "✎";
+            case ACTION_RESIZE: return "⤡";
+            default: return "Aa";
+        }
+    }
+
+    private String actionLabel(int a) {
+        int res;
+        switch (a) {
+            case ACTION_REMOVE: res = com.piko.launcher.R.string.act_remove; break;
+            case ACTION_UNINSTALL: res = com.piko.launcher.R.string.act_uninstall; break;
+            case ACTION_INFO: res = com.piko.launcher.R.string.act_info; break;
+            case ACTION_EDIT: res = com.piko.launcher.R.string.act_edit; break;
+            case ACTION_RESIZE: res = com.piko.launcher.R.string.act_resize; break;
+            default: res = com.piko.launcher.R.string.act_name;
+        }
+        return getResources().getString(res);
+    }
+
+    /** Tiles across the top: faint until the finger has left the strip once, then lit under the finger. */
+    private void drawActionBar(Canvas canvas, float density) {
+        float h = removeZoneHeight();
+        int n = actions.length;
+        float tileW = getWidth() / (float) n;
+        fillPaint.setColor(removeArmed ? 0xEE15181F : 0x8815181F);
+        canvas.drawRect(0, 0, getWidth(), h, fillPaint);
+        for (int i = 0; i < n; i++) {
+            boolean active = removeArmed && actions[i] == activeAction;
+            if (active) {
+                fillPaint.setColor(actions[i] == ACTION_REMOVE || actions[i] == ACTION_UNINSTALL ? 0xFFE53935 : 0xFF7C9CFF);
+                tmpRect.set(i * tileW + 4 * density, 4 * density, (i + 1) * tileW - 4 * density, h - 4 * density);
+                canvas.drawRoundRect(tmpRect, 12 * density, 12 * density, fillPaint);
+            }
+            textPaint.setAlpha(removeArmed ? 255 : 120);
+            textPaint.setTextSize(20 * density);
+            canvas.drawText(actionGlyph(actions[i]), i * tileW + tileW / 2f, h / 2f + 2 * density, textPaint);
+            textPaint.setTextSize(10.5f * density);
+            canvas.drawText(actionLabel(actions[i]), i * tileW + tileW / 2f, h - 10 * density, textPaint);
+        }
+        textPaint.setAlpha(255);
+        textPaint.setTextSize(11 * density);
+        fillPaint.setColor(0x337C9CFF);
+    }
+
     private static int spanOf(View v, boolean cols) {
         GridLayoutParams lp = (GridLayoutParams) v.getLayoutParams();
         return cols ? lp.colSpan : lp.rowSpan;
     }
 
     private float removeZoneHeight() {
-        // Thin strip on purpose: the top row of icons must stay safely outside it.
-        return Math.max(cellH * 0.2f, 14 * getResources().getDisplayMetrics().density);
+        return 64 * getResources().getDisplayMetrics().density;
     }
 
     private boolean handleResizeTouch(MotionEvent ev) {
@@ -239,11 +311,13 @@ public final class HomeGridLayout extends ViewGroup {
             }
             case MotionEvent.ACTION_MOVE: {
                 if (!resizeHandleDown) return true;
-                int cs = Math.round((ev.getX() - lp.col * cellW) / (float) cellW);
-                int rs = Math.round((ev.getY() - lp.row * cellH) / (float) cellH);
-                cs = Math.max(1, Math.min(columns - lp.col, cs));
-                rs = Math.max(1, Math.min(rows - lp.row, rs));
-                if ((cs != lp.colSpan || rs != lp.rowSpan) && isAreaFree(lp.col, lp.row, cs, rs, resizeView)) {
+                int l = leftOf(lp), t = topOf(lp);
+                int cs = Math.round((ev.getX() - l) / (float) cellW);
+                int rs = Math.round((ev.getY() - t) / (float) cellH);
+                cs = Math.max(1, Math.min((getMeasuredWidth() - l) / cellW, cs));
+                rs = Math.max(1, Math.min((getMeasuredHeight() - t) / cellH, rs));
+                if ((cs != lp.colSpan || rs != lp.rowSpan)
+                        && (freeform || isAreaFree(lp.col, lp.row, cs, rs, resizeView))) {
                     lp.colSpan = cs;
                     lp.rowSpan = rs;
                     requestLayout();
@@ -334,8 +408,10 @@ public final class HomeGridLayout extends ViewGroup {
     private void toLocal(float rawX, float rawY, float[] out) {
         View parent = (View) getParent();
         parent.getLocationOnScreen(loc);
-        out[0] = rawX - loc[0] - (getLeft() - parent.getScrollX());
-        out[1] = rawY - loc[1] - (getTop() - parent.getScrollY());
+        float scale = 1f;
+        for (View v = this; v.getParent() instanceof View; v = (View) v.getParent()) scale *= v.getScaleX();
+        out[0] = (rawX - loc[0]) / scale - (getLeft() - parent.getScrollX());
+        out[1] = (rawY - loc[1]) / scale - (getTop() - parent.getScrollY());
     }
 
     private final float[] tmpLocal = new float[2];
@@ -359,6 +435,8 @@ public final class HomeGridLayout extends ViewGroup {
         dragOffsetY = y - child.getTop();
         removeArmed = false;
         inRemoveZone = false;
+        activeAction = 0;
+        actions = callbacks != null ? callbacks.actionsFor(child) : null;
         edgeArmed = false;
         lift(child);
         child.bringToFront();
@@ -391,6 +469,8 @@ public final class HomeGridLayout extends ViewGroup {
         lastRawY = rawY;
         removeArmed = false;
         inRemoveZone = false;
+        activeAction = 0;
+        actions = callbacks != null ? callbacks.actionsFor(child) : null;
         edgeArmed = false;
         edgeBlockedUntil = android.os.SystemClock.uptimeMillis() + 700;
         lift(child);
@@ -435,9 +515,12 @@ public final class HomeGridLayout extends ViewGroup {
         }
         float zone = removeZoneHeight();
         if (y > zone) removeArmed = true;
-        boolean remove = removeArmed && y < zone;
-        Drop d = remove ? null : resolveDrop(v);
-        boolean changed = remove != inRemoveZone || !sameDrop(d, dropTarget);
+        boolean remove = removeArmed && y < zone && actions != null && actions.length > 0;
+        int act = remove ? actions[Math.max(0, Math.min(actions.length - 1, (int) (x / (getWidth() / (float) actions.length))))] : 0;
+        Drop d = remove || freeform ? null : resolveDrop(v);
+        boolean changed = remove != inRemoveZone || act != activeAction || !sameDrop(d, dropTarget);
+        if (act != activeAction) performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+        activeAction = act;
         inRemoveZone = remove;
         dropTarget = d;
         if (changed) {
@@ -507,7 +590,7 @@ public final class HomeGridLayout extends ViewGroup {
     /** Moves a view to the cell stored in its params, animating from where it visually was. */
     private void settleInto(View v, int fromLeft, int fromTop) {
         GridLayoutParams lp = (GridLayoutParams) v.getLayoutParams();
-        int left = lp.col * cellW, top = lp.row * cellH;
+        int left = leftOf(lp), top = topOf(lp);
         v.layout(left, top, left + lp.colSpan * cellW, top + lp.rowSpan * cellH);
         v.setTranslationX(fromLeft - left);
         v.setTranslationY(fromTop - top);
@@ -519,6 +602,9 @@ public final class HomeGridLayout extends ViewGroup {
         View v = draggingView;
         draggingView = null;
         boolean wasRemove = inRemoveZone;
+        int action = activeAction;
+        activeAction = 0;
+        actions = null;
         Drop d = dropTarget;
         dropTarget = null;
         inRemoveZone = false;
@@ -538,9 +624,27 @@ public final class HomeGridLayout extends ViewGroup {
             return;
         }
         if (wasRemove && callbacks != null) {
-            drop(v);
-            callbacks.onItemRemoveRequested(v);
-            requestLayout();
+            if (action == ACTION_REMOVE) {
+                drop(v);
+                callbacks.onItemAction(v, action);
+                requestLayout();
+            } else {
+                settleInto(v, fromLeft, fromTop);
+                callbacks.onItemAction(v, action);
+            }
+            return;
+        }
+        if (freeform) {
+            int vw = lp.colSpan * cellW, vh = lp.rowSpan * cellH;
+            int left = Math.max(0, Math.min(getWidth() - vw, fromLeft));
+            int top = Math.max(0, Math.min(getHeight() - vh, fromTop));
+            lp.fx = left / (float) getWidth();
+            lp.fy = top / (float) getHeight();
+            lp.col = Math.max(0, Math.min(columns - lp.colSpan, Math.round(left / (float) cellW)));
+            lp.row = Math.max(0, Math.min(rows - lp.rowSpan, Math.round(top / (float) cellH)));
+            if (callbacks != null) callbacks.onItemMoved(v, lp.col, lp.row);
+            settleInto(v, fromLeft, fromTop);
+            performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
             return;
         }
         if (d != null && d.valid) {
@@ -663,8 +767,8 @@ public final class HomeGridLayout extends ViewGroup {
             View child = getChildAt(i);
             if (child == draggingView) continue;
             GridLayoutParams lp = (GridLayoutParams) child.getLayoutParams();
-            int left = lp.col * cellW;
-            int top = lp.row * cellH;
+            int left = leftOf(lp);
+            int top = topOf(lp);
             child.layout(left, top, left + lp.colSpan * cellW, top + lp.rowSpan * cellH);
         }
     }
@@ -677,6 +781,8 @@ public final class HomeGridLayout extends ViewGroup {
     /** Cell-based layout params: which grid cell an occupant starts at, and how many it spans. */
     public static final class GridLayoutParams extends ViewGroup.LayoutParams {
         public int col, row, colSpan, rowSpan;
+        /** Free-form position as page fractions; negative means "use col/row". */
+        public float fx = -1f, fy = -1f;
 
         public GridLayoutParams(int col, int row, int colSpan, int rowSpan) {
             super(WRAP_CONTENT, WRAP_CONTENT);

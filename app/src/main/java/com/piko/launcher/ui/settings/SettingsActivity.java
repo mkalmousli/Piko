@@ -89,9 +89,33 @@ public final class SettingsActivity extends Activity {
         int at = searchParent.indexOfChild(findViewById(R.id.btn_search_settings)) + 1;
         searchParent.addView(navRow("Icon pack  ›", IconPackActivity.class), at);
         searchParent.addView(navRow("Permissions  ›", PermissionsActivity.class), at + 1);
+        searchParent.addView(switchRow("Free-form icon placement", prefs.freeform(), on -> {
+            prefs.setFreeform(on);
+            prefs.bumpLayoutRevision();
+        }), at + 2);
+        searchParent.addView(switchRow("Hide all app names on home", prefs.hideAllLabels(), on -> {
+            prefs.setHideAllLabels(on);
+            prefs.bumpLayoutRevision();
+        }), at + 3);
 
         findViewById(R.id.btn_reset_layout).setOnClickListener(v -> confirmResetLayout());
         findViewById(R.id.btn_add_shortcut).setOnClickListener(v -> startAddShortcut());
+    }
+
+    private interface BoolConsumer {
+        void accept(boolean value);
+    }
+
+    private Switch switchRow(String label, boolean checked, BoolConsumer onChange) {
+        Switch sw = new Switch(this);
+        sw.setText(label);
+        sw.setTextSize(15);
+        sw.setTextColor(getResources().getColor(R.color.piko_text_primary));
+        int pad = (int) (12 * getResources().getDisplayMetrics().density);
+        sw.setPadding(pad, pad, pad, pad);
+        sw.setChecked(checked);
+        sw.setOnCheckedChangeListener((CompoundButton b, boolean on) -> onChange.accept(on));
+        return sw;
     }
 
     private TextView navRow(String label, Class<?> target) {

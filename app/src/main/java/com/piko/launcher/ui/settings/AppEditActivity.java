@@ -22,6 +22,7 @@ import com.piko.launcher.R;
 import com.piko.launcher.core.AppCustomizationStore;
 import com.piko.launcher.core.AppInfo;
 import com.piko.launcher.core.IconCache;
+import com.piko.launcher.core.Prefs;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -50,6 +51,7 @@ public final class AppEditActivity extends Activity {
     private String pendingIconPath;
     private ImageView iconPreview;
     private EditText nameInput, tagsInput;
+    private android.widget.Switch hideLabelSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -106,6 +108,13 @@ public final class AppEditActivity extends Activity {
         if (existing != null) tagsInput.setText(existing.tags);
         root.addView(tagsInput);
 
+        hideLabelSwitch = new android.widget.Switch(this);
+        hideLabelSwitch.setText(R.string.hide_name_on_home);
+        hideLabelSwitch.setTextColor(getResources().getColor(R.color.piko_text_primary));
+        hideLabelSwitch.setPadding(0, dp(16), 0, 0);
+        hideLabelSwitch.setChecked(existing != null && existing.hideLabel);
+        root.addView(hideLabelSwitch);
+
         LinearLayout buttonRow = new LinearLayout(this);
         buttonRow.setOrientation(LinearLayout.HORIZONTAL);
         buttonRow.setPadding(0, dp(24), 0, 0);
@@ -114,6 +123,7 @@ public final class AppEditActivity extends Activity {
         resetBtn.setText(R.string.action_reset);
         resetBtn.setOnClickListener(v -> {
             store.clear(key);
+            Prefs.get(this).bumpLayoutRevision();
             Toast.makeText(this, R.string.action_reset, Toast.LENGTH_SHORT).show();
             finish();
         });
@@ -180,7 +190,8 @@ public final class AppEditActivity extends Activity {
     private void save() {
         String name = nameInput.getText().toString().trim();
         String tags = tagsInput.getText().toString().trim();
-        store.save(key, name.isEmpty() ? null : name, tags, pendingIconPath);
+        store.save(key, name.isEmpty() ? null : name, tags, pendingIconPath, hideLabelSwitch.isChecked());
+        Prefs.get(this).bumpLayoutRevision();
         IconCache.get(this).evict(null);
         finish();
     }

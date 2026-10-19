@@ -7,6 +7,8 @@ public final class SearchResult {
     public static final int TYPE_CONTACT = 1;
     public static final int TYPE_CALC = 2;
     public static final int TYPE_WEB = 3;
+    /** One tappable action (call, message, one web engine…) shown as its own row. */
+    public static final int TYPE_ACTION = 4;
 
     public final int type;
     public final AppInfo app;
@@ -15,6 +17,11 @@ public final class SearchResult {
     public String text;
     /** TYPE_CALC only: the computed value, ready to copy or use. */
     public String value;
+    /** TYPE_ACTION only: badge glyph, subtitle and what tapping does. */
+    public String badge, subtitle;
+    public Runnable action;
+    /** TYPE_ACTION only: the contact this row belongs to, so a tap can teach the ranker. */
+    public ContactInfo owner;
 
     private SearchResult(int type, AppInfo app, ContactInfo contact) {
         this.type = type;
@@ -40,6 +47,15 @@ public final class SearchResult {
     public static SearchResult forWeb(String query) {
         SearchResult r = new SearchResult(TYPE_WEB, null, null);
         r.text = query;
+        return r;
+    }
+
+    public static SearchResult forAction(String badge, String title, String subtitle, Runnable action) {
+        SearchResult r = new SearchResult(TYPE_ACTION, null, null);
+        r.badge = badge;
+        r.text = title;
+        r.subtitle = subtitle;
+        r.action = action;
         return r;
     }
 }

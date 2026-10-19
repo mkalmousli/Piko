@@ -288,6 +288,23 @@ public final class Prefs {
         sp.edit().putStringSet(KEY_HIDDEN_APPS, set).apply();
     }
 
+    /** Free-form placement (default on): icons sit exactly where dropped instead of snapping to cells. */
+    public boolean freeform() {
+        return sp.getBoolean("freeform", true);
+    }
+
+    public void setFreeform(boolean v) {
+        sp.edit().putBoolean("freeform", v).apply();
+    }
+
+    public boolean hideAllLabels() {
+        return sp.getBoolean("hide_all_labels", false);
+    }
+
+    public void setHideAllLabels(boolean v) {
+        sp.edit().putBoolean("hide_all_labels", v).apply();
+    }
+
     public boolean isFirstRunDone() {
         return sp.getBoolean(KEY_FIRST_RUN, false);
     }
