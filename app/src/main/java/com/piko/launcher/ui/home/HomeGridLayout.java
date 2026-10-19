@@ -244,7 +244,18 @@ public final class HomeGridLayout extends ViewGroup {
         canvas.drawRect(r, fillPaint);
         canvas.drawRect(r, framePaint);
         fillPaint.setColor(0xFF7C9CFF);
-        canvas.drawCircle(r.right, r.bottom, 10 * density, fillPaint);
+        float hr = 7 * density;
+        float[] xs = {r.left, (r.left + r.right) / 2f, r.right};
+        float[] ys = {r.top, (r.top + r.bottom) / 2f, r.bottom};
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) continue;
+                if ((i == 1 || j == 1) && (r.width() < 96 * density || r.height() < 96 * density)) continue;
+                float cx = Math.max(hr, Math.min(getWidth() - hr, xs[i]));
+                float cy = Math.max(hr, Math.min(getHeight() - hr, ys[j]));
+                canvas.drawCircle(cx, cy, (i == 1 || j == 1) ? hr * 0.7f : hr, fillPaint);
+            }
+        }
         fillPaint.setColor(0x337C9CFF);
     }
 
@@ -309,47 +320,84 @@ public final class HomeGridLayout extends ViewGroup {
         return 64 * getResources().getDisplayMetrics().density;
     }
 
+    private static final int EDGE_L = 1, EDGE_T = 2, EDGE_R = 4, EDGE_B = 8;
+    private int resizeEdges;
+    private final RectF resizeStart = new RectF();
+    private float resizeDownX, resizeDownY;
+
+    public void stopResize() {
+        resizeView = null;
+        resizeHandleDown = false;
+        invalidate();
+    }
+
+    private int edgesAt(RectF r, float x, float y) {
+        float d = getResources().getDisplayMetrics().density;
+        float bx = Math.min(28 * d, r.width() / 3f), by = Math.min(28 * d, r.height() / 3f);
+        float out = 20 * d;
+        if (x < r.left - out || x > r.right + out || y < r.top - out || y > r.bottom + out) return -1;
+        int m = 0;
+        if (x <= r.left + bx) m |= EDGE_L; else if (x >= r.right - bx) m |= EDGE_R;
+        if (y <= r.top + by) m |= EDGE_T; else if (y >= r.bottom - by) m |= EDGE_B;
+        return m;
+    }
+
     private boolean handleResizeTouch(MotionEvent ev) {
         GridLayoutParams lp = (GridLayoutParams) resizeView.getLayoutParams();
+        int w = getMeasuredWidth(), h = getMeasuredHeight();
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN: {
                 RectF r = resizeRect();
-                float dx = ev.getX() - r.right, dy = ev.getY() - r.bottom;
-                if (dx * dx + dy * dy <= handleRadius() * handleRadius()) {
-                    resizeHandleDown = true;
-                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
-                } else if (!r.contains(ev.getX(), ev.getY())) {
+                int m = edgesAt(r, ev.getX(), ev.getY());
+                if (m < 0) {
                     resizeView = null;
                     invalidate();
+                } else if (m != 0) {
+                    resizeHandleDown = true;
+                    resizeEdges = m;
+                    resizeStart.set(r);
+                    resizeDownX = ev.getX();
+                    resizeDownY = ev.getY();
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                 }
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
                 if (!resizeHandleDown) return true;
-                int l = leftOf(lp), t = topOf(lp);
+                float d = getResources().getDisplayMetrics().density;
+                float minPx = Math.max(32 * d, Math.min(cellW, cellH) * 0.5f);
+                float dx = ev.getX() - resizeDownX, dy = ev.getY() - resizeDownY;
+                float l = resizeStart.left, t = resizeStart.top, r = resizeStart.right, b = resizeStart.bottom;
+                if ((resizeEdges & EDGE_L) != 0) l = Math.max(0, Math.min(r - minPx, l + dx));
+                if ((resizeEdges & EDGE_R) != 0) r = Math.min(w, Math.max(l + minPx, r + dx));
+                if ((resizeEdges & EDGE_T) != 0) t = Math.max(0, Math.min(b - minPx, t + dy));
+                if ((resizeEdges & EDGE_B) != 0) b = Math.min(h, Math.max(t + minPx, b + dy));
                 if (freeform) {
-                    float minPx = Math.max(24 * getResources().getDisplayMetrics().density, Math.min(cellW, cellH) * 0.5f);
-                    float w = Math.max(minPx, Math.min(getMeasuredWidth() - l, ev.getX() - l));
-                    float h = Math.max(minPx, Math.min(getMeasuredHeight() - t, ev.getY() - t));
-                    lp.fw = w / getMeasuredWidth();
-                    lp.fh = h / getMeasuredHeight();
-                    lp.colSpan = Math.max(1, (int) Math.ceil(w / cellW - 0.05));
-                    lp.rowSpan = Math.max(1, (int) Math.ceil(h / cellH - 0.05));
-                    requestLayout();
-                    invalidate();
-                    return true;
+                    lp.fx = l / w;
+                    lp.fy = t / h;
+                    lp.fw = (r - l) / w;
+                    lp.fh = (b - t) / h;
+                    lp.col = Math.max(0, Math.min(columns - 1, Math.round(l / cellW)));
+                    lp.row = Math.max(0, Math.min(rows - 1, Math.round(t / cellH)));
+                    lp.colSpan = Math.max(1, Math.min(columns - lp.col, (int) Math.ceil((r - l) / cellW - 0.05)));
+                    lp.rowSpan = Math.max(1, Math.min(rows - lp.row, (int) Math.ceil((b - t) / cellH - 0.05)));
+                } else {
+                    int c0 = Math.max(0, Math.min(columns - 1, Math.round(l / cellW)));
+                    int r0 = Math.max(0, Math.min(rows - 1, Math.round(t / cellH)));
+                    int c1 = Math.max(c0 + 1, Math.min(columns, Math.round(r / cellW)));
+                    int r1 = Math.max(r0 + 1, Math.min(rows, Math.round(b / cellH)));
+                    if ((c0 != lp.col || r0 != lp.row || c1 - c0 != lp.colSpan || r1 - r0 != lp.rowSpan)
+                            && isAreaFree(c0, r0, c1 - c0, r1 - r0, resizeView)) {
+                        lp.col = c0;
+                        lp.row = r0;
+                        lp.colSpan = c1 - c0;
+                        lp.rowSpan = r1 - r0;
+                    } else {
+                        return true;
+                    }
                 }
-                int cs = Math.round((ev.getX() - l) / (float) cellW);
-                int rs = Math.round((ev.getY() - t) / (float) cellH);
-                cs = Math.max(1, Math.min((getMeasuredWidth() - l) / cellW, cs));
-                rs = Math.max(1, Math.min((getMeasuredHeight() - t) / cellH, rs));
-                if ((cs != lp.colSpan || rs != lp.rowSpan)
-                        && (freeform || isAreaFree(lp.col, lp.row, cs, rs, resizeView))) {
-                    lp.colSpan = cs;
-                    lp.rowSpan = rs;
-                    requestLayout();
-                    invalidate();
-                }
+                requestLayout();
+                invalidate();
                 return true;
             }
             case MotionEvent.ACTION_UP:

@@ -409,6 +409,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 HomeGridLayout.GridLayoutParams lp = (HomeGridLayout.GridLayoutParams) child.getLayoutParams();
                 item.colSpan = lp.colSpan;
                 item.rowSpan = lp.rowSpan;
+                item.col = lp.col;
+                item.row = lp.row;
+                item.fx = lp.fx;
+                item.fy = lp.fy;
                 item.fw = lp.fw;
                 item.fh = lp.fh;
                 if (child instanceof android.appwidget.AppWidgetHostView) {
@@ -1759,6 +1763,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     protected void onPause() {
         super.onPause();
         widgetHostController.stopListening();
+        for (HomeGridLayout g : gridPages) g.stopResize();
+        if (searchInput != null && !isChangingConfigurations()) searchInput.setText("");
     }
 
     @Override
