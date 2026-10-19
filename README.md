@@ -6,14 +6,15 @@
 
 <p align="center">
   <b>A minimal, fast, search-first Android launcher.</b><br>
-  ~80&nbsp;KB · zero dependencies · no ads · no tracking · open source
+  ~280&nbsp;KB · starts in ~0.3&nbsp;s · runs on Android 1.0 and up · zero dependencies · no ads · no tracking
 </p>
 
 <p align="center">
   <a href="https://github.com/mkalmousli/Piko/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mkalmousli/Piko?color=7C9CFF&label=release"></a>
   <a href="https://github.com/mkalmousli/Piko/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/mkalmousli/Piko/ci.yml?branch=main"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/mkalmousli/Piko?color=7C9CFF"></a>
-  <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3DDC84">
+  <img alt="Android 1.0+" src="https://img.shields.io/badge/Android-1.0%2B-3DDC84">
+  <img alt="APK size" src="https://img.shields.io/badge/APK-~280%20KB-7C9CFF">
   <a href="https://al-mo.de/apps/piko/"><img alt="Website" src="https://img.shields.io/badge/website-al-mo.de%2Fapps%2Fpiko-7C9CFF"></a>
 </p>
 
@@ -31,6 +32,14 @@
 Piko opens on a search bar. Type a few letters and launch an app, call a contact, do the maths,
 convert a currency or hand the query to your favourite search engine or AI chat. Swipe once to
 reach a clean, configurable icon grid. That's it.
+
+## Why Piko
+
+- **Runs on everything.** One APK supports Android 1.0 (API 1) through current releases. Features that need a newer Android (widgets, shortcuts pinned by other apps) switch off on older versions instead of breaking the launcher.
+- **Tiny.** The release APK is about 280 KB, with no libraries inside: no AndroidX, no Material, nothing to update or audit.
+- **Fast.** Cold start takes about 0.3 s on a Moto G7 Play, an entry-level 2019 phone, and the app uses about 37 MB of RAM. Search runs against an in-memory index.
+
+Measured on a Moto G7 Play (Android 10) with the release build. Versions before Android 10 are covered by API-level lint rather than real-device testing.
 
 ## Features
 

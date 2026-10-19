@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Piko – Minimal Search-First Android Launcher | Mohamad Almousli</title>
-<meta name="description" content="Piko is a tiny (~80 KB), open-source, ad-free Android launcher that opens on search: launch apps, call contacts, calculate, convert currency and search the web or AI chats in one place.">
+<meta name="description" content="Piko is a tiny (~280 KB), fast, open-source, ad-free Android launcher that opens on search: launch apps, call contacts, calculate, convert currency and search the web or AI chats in one place.">
 <meta name="keywords" content="android launcher, minimal launcher, search launcher, open source launcher, lightweight launcher, no ads launcher, privacy launcher, calculator launcher, currency converter, ChatGPT launcher, Claude launcher, Piko">
 <meta name="author" content="Mohamad Almousli">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -46,8 +46,8 @@
       "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
       "author": {"@id": "https://al-mo.de/#person"},
       "isPartOf": {"@id": "https://al-mo.de/#website"},
-      "softwareVersion": "1.3.0",
-      "fileSize": "80KB"
+      "softwareVersion": "1.4.0",
+      "fileSize": "285KB"
     },
     {
       "@type": "Person",
@@ -110,12 +110,12 @@ footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);t
   <div class="hero">
     <div>
       <h1>The Android launcher that <span>starts with search</span>.</h1>
-      <p class="lead">Piko is a tiny, open-source launcher. Type to open an app, call a contact, do the maths, convert a currency or ask your favourite search engine or AI. No ads, no tracking, about 80&nbsp;KB.</p>
+      <p class="lead">Piko is a tiny, open-source launcher. Type to open an app, call a contact, do the maths, convert a currency or ask your favourite search engine or AI. No ads, no tracking. About 280&nbsp;KB, starts in 0.3&nbsp;s and runs on Android 1.0 and up.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/mkalmousli/Piko/releases/latest">Download APK</a>
         <a class="btn" href="https://github.com/mkalmousli/Piko">View on GitHub</a>
       </div>
-      <div class="badges">Android 1.0+ · MIT license · zero dependencies</div>
+      <div class="badges">Android 1.0+ · ~280 KB · ~0.3 s start · MIT license · zero dependencies</div>
     </div>
     <div class="phones">
       <img src="screenshots/05-calculator.png" width="720" height="1512" alt="Piko inline calculator answering 12*8+4 = 100">
@@ -127,6 +127,9 @@ footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);t
     <h2>Everything within one search bar</h2>
     <p class="sub">Piko is built around the thing you do most: find something fast.</p>
     <div class="grid">
+      <div class="card"><h3>Runs on any Android</h3><p>One APK for Android 1.0 and up. Features a version can't support, like widgets before 4.1, switch off instead of breaking.</p></div>
+      <div class="card"><h3>~280 KB</h3><p>The whole launcher is smaller than a typical photo, with no libraries inside.</p></div>
+      <div class="card"><h3>Fast</h3><p>Cold start in about 0.3 s on an entry-level 2019 phone, using about 37 MB of RAM. Search runs on an in-memory index.</p></div>
       <div class="card"><h3>Search-first</h3><p>Opens on search. Results learn from your choices and launch history.</p></div>
       <div class="card"><h3>Calculator &amp; currency</h3><p>Type <code>12*8+4</code> or <code>100 usd to eur</code> and get the answer instantly.</p></div>
       <div class="card"><h3>Web &amp; AI in one tap</h3><p>Google, Brave, DuckDuckGo, Bing, ChatGPT, Claude, Perplexity, or any custom URL.</p></div>
@@ -136,7 +139,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);t
       <div class="card"><h3>Shortcuts from any app</h3><p>Add shortcuts from Chrome and other apps, pin search actions and websites to home, and edit their name, target and icon.</p></div>
       <div class="card"><h3>Your background</h3><p>Solid colour, gradient, system wallpaper or your own image, with adjustable darkening.</p></div>
       <div class="card"><h3>Compact results</h3><p>Contacts expand into colourful action chips, search engines share one row, and calculations keep a history.</p></div>
-      <div class="card"><h3>Tiny &amp; private</h3><p>Pure Android SDK. No analytics, ads or trackers. Contacts permission is optional.</p></div>
+      <div class="card"><h3>Private</h3><p>Pure Android SDK. No analytics, ads or trackers. Contacts permission is optional.</p></div>
       <div class="card"><h3>Open source</h3><p>MIT licensed, built and signed by GitHub Actions on every release.</p></div>
     </div>
   </section>
