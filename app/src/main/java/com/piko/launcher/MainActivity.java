@@ -635,19 +635,24 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 currentResults.addAll(at, emailRows(trimmed));
             }
             if (prefs.flag(Prefs.FLAG_SEARCH_WEB)) {
-                List<SearchResult> more = new ArrayList<>();
-                boolean first = true;
+                List<SearchResult.Chip> chips = new ArrayList<>();
                 for (String engineId : prefs.enabledSearchEngines()) {
                     com.piko.launcher.core.WebSearchEngines.Engine e = prefs.engineById(engineId);
-                    SearchResult row = SearchResult.forAction(e.label.substring(0, 1), getString(R.string.search_engine_for, e.label),
-                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)).pinnable("web", engineId)
-                            .chipLabel(e.label);
-                    if (first) currentResults.add(row);
-                    else more.add(row);
-                    first = false;
+                    SearchResult.Chip c = new SearchResult.Chip();
+                    c.badge = e.label.substring(0, 1);
+                    c.label = e.label;
+                    c.color = chipColor("web");
+                    c.run = () -> IntentUtil.webSearch(this, engineId, trimmed);
+                    c.onLongPress = v -> {
+                        SearchResult pin = SearchResult.forAction(null, getString(R.string.search_engine_for, e.label),
+                                trimmed, null).pinnable("web", engineId);
+                        showAddToHome(v, pin);
+                    };
+                    chips.add(c);
                 }
-                if (!more.isEmpty()) {
-                    currentResults.addAll(group("web", "More search engines", String.valueOf(more.size()), R.drawable.ic_globe, null, more));
+                // A handful of engines fit in one strip; more wrap onto extra strips.
+                for (int i = 0; i < chips.size(); i += 5) {
+                    currentResults.add(SearchResult.forChips(new ArrayList<>(chips.subList(i, Math.min(chips.size(), i + 5)))));
                 }
             }
         }
@@ -689,12 +694,18 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     /** A header row that toggles a strip of compact action buttons shown right after it. */
     private List<SearchResult> group(String key, String title, String sub, int icon, String copy, List<SearchResult> kids) {
-        boolean open = expandedContacts.contains(key);
+        return group(key, title, sub, icon, copy, kids, false);
+    }
+
+    /** {@code fixed}: nothing to collapse (a lone result), so the buttons are always shown and the header is a plain label. */
+    private List<SearchResult> group(String key, String title, String sub, int icon, String copy, List<SearchResult> kids, boolean fixed) {
+        boolean open = fixed || expandedContacts.contains(key);
         List<SearchResult> rows = new ArrayList<>();
         rows.add(SearchResult.forAction(null, title, sub, () -> {
+            if (fixed) return;
             if (!expandedContacts.remove(key)) expandedContacts.add(key);
             filterAndShow(searchInput.getText().toString());
-        }).withIcon(icon).grouped(open ? SearchResult.GROUP_OPEN : SearchResult.GROUP_HEADER).copyOnLongPress(copy));
+        }).withIcon(icon).grouped(fixed ? SearchResult.GROUP_FIXED : open ? SearchResult.GROUP_OPEN : SearchResult.GROUP_HEADER).copyOnLongPress(copy));
         if (open) {
             List<SearchResult.Chip> chips = new ArrayList<>();
             for (SearchResult k : kids) {
@@ -732,6 +743,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     /** Shows each contact as one row; tapping it expands one row per enabled action (call, SMS, WhatsApp...), keeping ranking order. */
     private List<SearchResult> explodeContacts(List<SearchResult> in, String query) {
         List<SearchResult> out = new ArrayList<>();
+        int contactCount = 0;
+        for (SearchResult r : in) if (r.type == SearchResult.TYPE_CONTACT) contactCount++;
         for (SearchResult r : in) {
             if (r.type != SearchResult.TYPE_CONTACT) {
                 out.add(r);
@@ -759,7 +772,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             out.add(contactAction("copy", c.phoneNumber, getString(R.string.act_copy_number, who), sub, c, q,
                     () -> IntentUtil.copyToClipboard(this, "number", c.phoneNumber)));
             out = out0;
-            out.addAll(group("c:" + SearchEngine.contactKey(c), who, sub, R.drawable.ic_person, c.phoneNumber, kids));
+            out.addAll(group("c:" + SearchEngine.contactKey(c), who, sub, R.drawable.ic_person, c.phoneNumber, kids, contactCount == 1));
         }
         return out;
     }
@@ -773,7 +786,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         kids.add(SearchResult.forAction(null, getString(R.string.act_copy_email), email,
                 () -> IntentUtil.copyToClipboard(this, "email", email))
                 .withIcon(HomeIconViewFactory.iconForKind("copyemail")).pinnable("copyemail", email));
-        return group("e:" + email, email, "", R.drawable.ic_mail, email, kids);
+        return group("e:" + email, email, "", R.drawable.ic_mail, email, kids, true);
     }
 
     private void writeEmail(String email) {

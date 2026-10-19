@@ -50,7 +50,7 @@ public final class SearchResult {
     public String shortcutKind, shortcutData;
 
     /** Grouping: header rows toggle their children; children are drawn indented under an open header. */
-    public static final int GROUP_NONE = 0, GROUP_HEADER = 1, GROUP_OPEN = 2, GROUP_CHILD = 3;
+    public static final int GROUP_NONE = 0, GROUP_HEADER = 1, GROUP_OPEN = 2, GROUP_CHILD = 3, GROUP_FIXED = 4;
     public int group = GROUP_NONE;
     /** Copied on long-press when set (e.g. a contact's number). */
     public String copyText;

@@ -122,7 +122,7 @@ public final class SearchResultAdapter extends BaseAdapter {
             v.setBackgroundResource(R.drawable.bg_group_card);
             return v;
         }
-        if (r.group == SearchResult.GROUP_OPEN) bg = R.drawable.bg_group_open;
+        if (r.group == SearchResult.GROUP_OPEN || r.group == SearchResult.GROUP_FIXED) bg = R.drawable.bg_group_open;
         else if (r.group == SearchResult.GROUP_CHILD) bg = R.drawable.bg_group_child;
         if (showSelection && position == selected) bg = R.drawable.bg_selected;
         v.setBackgroundResource(bg);
@@ -190,7 +190,7 @@ public final class SearchResultAdapter extends BaseAdapter {
         holder.badgeIcon.setVisibility(result.icon == 0 ? View.GONE : View.VISIBLE);
         holder.title.setText(TextHighlighter.highlight(context, result.text, currentQuery));
         boolean header = result.group == SearchResult.GROUP_HEADER || result.group == SearchResult.GROUP_OPEN;
-        boolean open = result.group == SearchResult.GROUP_OPEN;
+        boolean open = result.group == SearchResult.GROUP_OPEN || result.group == SearchResult.GROUP_FIXED;
         holder.chevron.setVisibility(header ? View.VISIBLE : View.GONE);
         if (header) {
             holder.chevron.setImageResource(R.drawable.ic_expand);
