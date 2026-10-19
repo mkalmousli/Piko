@@ -945,6 +945,16 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 break;
             }
             case "url": openUrl(data); break;
+            case "pin": {
+                int nl = data.indexOf('\n');
+                try {
+                    getSystemService(android.content.pm.LauncherApps.class).startShortcut(
+                            data.substring(0, nl), data.substring(nl + 1), null, null, android.os.Process.myUserHandle());
+                } catch (Exception e) {
+                    Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+                }
+                break;
+            }
             case "piko": runPikoAction(data); break;
         }
     }

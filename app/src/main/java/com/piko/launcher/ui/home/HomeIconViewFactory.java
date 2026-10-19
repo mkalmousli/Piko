@@ -70,7 +70,37 @@ public final class HomeIconViewFactory {
     }
 
     public static View createShortcut(Context context, HomeItem item) {
+        if ("pin".equals(item.kind)) {
+            android.graphics.drawable.Drawable d = pinnedIcon(context, item.data);
+            if (d != null) {
+                View view = chipIcon(context, item, iconForKind("pin"));
+                ImageView icon = view.findViewById(R.id.icon);
+                icon.setBackground(null);
+                icon.setPadding(0, 0, 0, 0);
+                icon.setImageDrawable(d);
+                return view;
+            }
+        }
         return chipIcon(context, item, iconForKind(item.kind));
+    }
+
+    /** The icon another app supplied for a pinned shortcut (data is "package\nid"), or null. */
+    private static android.graphics.drawable.Drawable pinnedIcon(Context context, String data) {
+        try {
+            android.content.pm.LauncherApps apps = context.getSystemService(android.content.pm.LauncherApps.class);
+            int nl = data.indexOf('\n');
+            android.content.pm.LauncherApps.ShortcutQuery q = new android.content.pm.LauncherApps.ShortcutQuery()
+                    .setPackage(data.substring(0, nl))
+                    .setShortcutIds(java.util.Collections.singletonList(data.substring(nl + 1)))
+                    .setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+                            | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+                            | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST);
+            java.util.List<android.content.pm.ShortcutInfo> list = apps.getShortcuts(q, android.os.Process.myUserHandle());
+            if (list == null || list.isEmpty()) return null;
+            return apps.getShortcutIconDrawable(list.get(0), context.getResources().getDisplayMetrics().densityDpi);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public static View createFolder(Context context, HomeItem item) {
