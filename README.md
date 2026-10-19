@@ -14,12 +14,12 @@
   <a href="https://github.com/mkalmousli/Piko/actions/workflows/ci.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/mkalmousli/Piko/ci.yml?branch=main"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/mkalmousli/Piko?color=7C9CFF"></a>
   <img alt="Android 8.0+" src="https://img.shields.io/badge/Android-8.0%2B-3DDC84">
-  <a href="https://mkalmousli.github.io/Piko/"><img alt="Website" src="https://img.shields.io/badge/website-mkalmousli.github.io%2FPiko-7C9CFF"></a>
+  <a href="https://al-mo.de/apps/piko/"><img alt="Website" src="https://img.shields.io/badge/website-al-mo.de%2Fapps%2Fpiko-7C9CFF"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/mkalmousli/Piko/releases/latest"><b>⬇ Download the APK</b></a> ·
-  <a href="https://mkalmousli.github.io/Piko/">Website</a> ·
+  <a href="https://al-mo.de/apps/piko/">Website</a> ·
   <a href="PRIVACY.md">Privacy</a> ·
   <a href="https://al-mo.de">Author</a>
 </p>
@@ -117,7 +117,7 @@ cd Piko
 
 Pushing a tag like `v1.0.0` triggers [the release workflow](.github/workflows/release.yml): it builds a
 signed APK, attaches it with a checksum and generates release notes. Pushes and pull requests run
-[CI](.github/workflows/ci.yml). The [project site](https://mkalmousli.github.io/Piko/) is deployed from
+[CI](.github/workflows/ci.yml). The [project site](https://al-mo.de/apps/piko/) is deployed from
 [`docs/`](docs) by [the Pages workflow](.github/workflows/pages.yml).
 
 ## Contributing

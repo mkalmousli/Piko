@@ -3,13 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Piko – Minimal Search-First Android Launcher</title>
+<title>Piko – Minimal Search-First Android Launcher | Mohamad Almousli</title>
 <meta name="description" content="Piko is a tiny (~80 KB), open-source, ad-free Android launcher that opens on search: launch apps, call contacts, calculate, convert currency and search the web or AI chats in one place.">
 <meta name="keywords" content="android launcher, minimal launcher, search launcher, open source launcher, lightweight launcher, no ads launcher, privacy launcher, calculator launcher, currency converter, ChatGPT launcher, Claude launcher, Piko">
 <meta name="author" content="Mohamad Almousli">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#0E0F12">
-<link rel="canonical" href="https://mkalmousli.github.io/Piko/">
+<meta name="application-name" content="Piko">
+<meta property="og:locale" content="en_US">
+<link rel="canonical" href="https://al-mo.de/apps/piko/">
 <link rel="icon" href="assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -17,15 +19,15 @@
 <meta property="og:site_name" content="Piko">
 <meta property="og:title" content="Piko – Minimal Search-First Android Launcher">
 <meta property="og:description" content="Tiny, open-source, ad-free Android launcher. Search apps, contacts, maths, currency and the web or AI chats from one bar.">
-<meta property="og:url" content="https://mkalmousli.github.io/Piko/">
-<meta property="og:image" content="https://mkalmousli.github.io/Piko/assets/social-preview.png">
+<meta property="og:url" content="https://al-mo.de/apps/piko/">
+<meta property="og:image" content="https://al-mo.de/apps/piko/assets/social-preview.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta property="og:image:alt" content="Piko launcher on a phone showing search and the home grid">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Piko – Minimal Search-First Android Launcher">
 <meta name="twitter:description" content="Tiny, open-source, ad-free Android launcher with built-in calculator, currency conversion and web/AI search.">
-<meta name="twitter:image" content="https://mkalmousli.github.io/Piko/assets/social-preview.png">
+<meta name="twitter:image" content="https://al-mo.de/apps/piko/assets/social-preview.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -36,13 +38,16 @@
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Android 8.0+",
       "description": "A minimal, fast, search-first Android launcher with inline calculator, currency conversion, contact actions and multi-engine web and AI search.",
-      "url": "https://mkalmousli.github.io/Piko/",
+      "url": "https://al-mo.de/apps/piko/",
       "downloadUrl": "https://github.com/mkalmousli/Piko/releases/latest",
       "codeRepository": "https://github.com/mkalmousli/Piko",
       "license": "https://opensource.org/licenses/MIT",
-      "image": "https://mkalmousli.github.io/Piko/assets/social-preview.png",
+      "image": "https://al-mo.de/apps/piko/assets/social-preview.png",
       "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-      "author": {"@id": "https://al-mo.de/#person"}
+      "author": {"@id": "https://al-mo.de/#person"},
+      "isPartOf": {"@id": "https://al-mo.de/#website"},
+      "softwareVersion": "1.0.0",
+      "fileSize": "80KB"
     },
     {
       "@type": "Person",
@@ -50,7 +55,10 @@
       "name": "Mohamad Almousli",
       "url": "https://al-mo.de",
       "sameAs": ["https://github.com/mkalmousli"]
-    }
+    },
+    {"@type": "WebSite", "@id": "https://al-mo.de/#website", "url": "https://al-mo.de/", "name": "Mohamad Almousli"},
+    {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "al-mo.de", "item": "https://al-mo.de/"}, {"@type": "ListItem", "position": 2, "name": "Apps", "item": "https://al-mo.de/apps/"}, {"@type": "ListItem", "position": 3, "name": "Piko", "item": "https://al-mo.de/apps/piko/"}]},
+    {"@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "How do I install Piko?", "acceptedAnswer": {"@type": "Answer", "text": "Download the APK from the latest GitHub release, install it, then press Home and choose Piko as your default launcher."}}, {"@type": "Question", "name": "Which Android versions are supported?", "acceptedAnswer": {"@type": "Answer", "text": "Android 8.0 (API 26) and newer."}}, {"@type": "Question", "name": "Does Piko collect any data?", "acceptedAnswer": {"@type": "Answer", "text": "No. Everything stays on your device. The only network request Piko makes itself is for currency rates."}}, {"@type": "Question", "name": "Is the contacts permission required?", "acceptedAnswer": {"@type": "Answer", "text": "No. Decline it and apps, calculator, currency and web search still work."}}, {"@type": "Question", "name": "Can I use ChatGPT, Claude or my own search engine?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Enable the built-in engines or add any site that accepts a query in its URL."}}]}
   ]
 }
 </script>
@@ -94,8 +102,8 @@ footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);t
 <body>
 <div class="wrap">
   <header class="top">
-    <a class="brand" href="#"><img src="assets/icon-512.png" width="32" height="32" alt="Piko icon">Piko</a>
-    <nav><a href="#features">Features</a><a href="#screenshots">Screenshots</a><a href="#faq">FAQ</a><a class="keep" href="https://github.com/mkalmousli/Piko">GitHub</a></nav>
+    <a class="brand" href="./"><img src="assets/icon-512.png" width="32" height="32" alt="Piko icon">Piko</a>
+    <nav><a href="https://al-mo.de/apps/">All apps</a><a href="#features">Features</a><a href="#screenshots">Screenshots</a><a href="#faq">FAQ</a><a class="keep" href="https://github.com/mkalmousli/Piko">GitHub</a></nav>
   </header>
 
   <main>
@@ -161,7 +169,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);t
 
   <footer>
     <p>Piko is open source under the <a href="https://github.com/mkalmousli/Piko/blob/main/LICENSE">MIT license</a>.</p>
-    <p>Made by <a href="https://al-mo.de" rel="author">Mohamad Almousli</a> · <a href="https://al-mo.de">al-mo.de</a> · <a href="https://github.com/mkalmousli">GitHub</a></p>
+    <p>Made by <a href="https://al-mo.de" rel="author">Mohamad Almousli</a> · <a href="https://al-mo.de/apps/">More apps</a> · <a href="https://github.com/mkalmousli">GitHub</a></p>
   </footer>
 </div>
 </body>
