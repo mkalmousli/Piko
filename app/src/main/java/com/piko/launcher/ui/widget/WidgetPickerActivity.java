@@ -33,6 +33,8 @@ import java.util.concurrent.Executors;
 public final class WidgetPickerActivity extends Activity {
 
     public static final String EXTRA_PROVIDER = "extra_provider";
+    /** Optional: show only the widgets of this package. */
+    public static final String EXTRA_PACKAGE = "extra_package";
 
     private ExpandableListView list;
     private WidgetPickerAdapter adapter;
@@ -93,8 +95,10 @@ public final class WidgetPickerActivity extends Activity {
         AppWidgetManager awm = AppWidgetManager.getInstance(this);
         Map<String, WidgetProviderGroup> byPackage = new LinkedHashMap<>();
 
+        String only = getIntent().getStringExtra(EXTRA_PACKAGE);
         for (AppWidgetProviderInfo info : awm.getInstalledProviders()) {
             String packageName = info.provider.getPackageName();
+            if (only != null && !only.equals(packageName)) continue;
             WidgetProviderGroup group = byPackage.get(packageName);
             if (group == null) {
                 group = new WidgetProviderGroup(packageName, appLabel(pm, packageName), appIcon(pm, packageName));
@@ -107,7 +111,7 @@ public final class WidgetPickerActivity extends Activity {
         Collections.sort(groups, Comparator.comparing(g -> g.appLabel.toLowerCase()));
         for (WidgetProviderGroup group : groups) {
             Collections.sort(group.widgets, Comparator.comparing(
-                    (AppWidgetProviderInfo w) -> w.loadLabel(pm).toLowerCase()));
+                    (AppWidgetProviderInfo w) -> adapter.label(w).toLowerCase()));
         }
         return groups;
     }
@@ -146,7 +150,7 @@ public final class WidgetPickerActivity extends Activity {
             }
             WidgetProviderGroup partial = new WidgetProviderGroup(group.packageName, group.appLabel, group.appIcon);
             for (AppWidgetProviderInfo info : group.widgets) {
-                if (info.loadLabel(getPackageManager()).toLowerCase().contains(query)) {
+                if (adapter.label(info).toLowerCase().contains(query)) {
                     partial.widgets.add(info);
                 }
             }
@@ -157,8 +161,14 @@ public final class WidgetPickerActivity extends Activity {
         emptyText.setVisibility(filtered.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
         list.setVisibility(filtered.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
 
-        if (searching) {
+        if (searching || getIntent().getStringExtra(EXTRA_PACKAGE) != null) {
             for (int i = 0; i < filtered.size(); i++) list.expandGroup(i);
         }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        adapter.shutdown();
     }
 }

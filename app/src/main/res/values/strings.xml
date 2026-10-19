@@ -100,7 +100,7 @@
     <string name="folder_add_app">Add app</string>
     <string name="act_write_email">Write email to %1$s</string>
     <string name="act_copy_email">Copy email address</string>
-    <string name="ov_add_page_top">Add page</string>
+    <string name="menu_app_widgets">Widgets</string>
     <string name="ov_swipe_hint">Swipe to switch pages</string>
     <string name="act_add_contact">Add to contacts</string>
 </resources>

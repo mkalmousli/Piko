@@ -99,6 +99,7 @@
         <activity
             android:name=".ui.widget.WidgetPickerActivity"
             android:label="@string/menu_add_widget"
+            android:windowSoftInputMode="stateAlwaysHidden"
             android:screenOrientation="portrait"
             android:exported="false" />
 

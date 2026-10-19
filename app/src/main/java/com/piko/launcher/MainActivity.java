@@ -13,6 +13,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -81,7 +82,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private LinearLayout overviewBar;
     private TextView overviewTitle;
     private LinearLayout ovRow;
-    private View ovTidy, ovDefault, ovDelete, ovWidget, ovAddPage, ovPrev, ovNext;
+    private View ovTidy, ovDefault, ovDelete, ovWidget, ovAddPage, ovAddLeft, ovPrev, ovNext;
     private boolean overview;
     private LinearLayout pageIndicator;
     private EditText searchInput;
@@ -336,6 +337,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private HomeGridLayout createGrid(int pageId, int columns, int rows) {
         HomeGridLayout grid = new HomeGridLayout(this, columns, rows);
         grid.setFreeform(prefs.freeform());
+        grid.setLongPressEnabled(!overview);
         grid.setCallbacks(new HomeGridLayout.Callbacks() {
             @Override
             public void onEmptyCellLongPress(int col, int row) {
@@ -656,7 +658,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         switch (id) {
             case "settings": startActivity(new Intent(this, SettingsActivity.class)); break;
             case "overview": enterOverview(); break;
-            case "addpage": addPage(); break;
+            case "addpage": addPage(gridPages.size()); break;
             case "setdefault":
                 prefs.setDefaultPage(pager.getCurrentItem());
                 Toast.makeText(this, R.string.ov_default_set, Toast.LENGTH_SHORT).show();
@@ -737,8 +739,15 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         menu.getMenu().add(0, 2, 1, R.string.menu_app_info);
         menu.getMenu().add(0, 3, 2, R.string.menu_edit_app);
         menu.getMenu().add(0, 4, 3, R.string.menu_uninstall);
+        if (!android.appwidget.AppWidgetManager.getInstance(this)
+                .getInstalledProvidersForPackage(app.packageName, null).isEmpty()) {
+            menu.getMenu().add(0, 5, 1, R.string.menu_app_widgets);
+        }
         menu.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
+                case 5:
+                    startWidgetPicker(Math.max(0, pager.getCurrentItem() - 1), 0, 0, app.packageName);
+                    return true;
                 case 1:
                     addAppToFirstFreeCell(app);
                     return true;
@@ -771,14 +780,20 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (item.getItemId() == 1) {
                 showAppPickerDialog(pageIndex, col, row);
             } else {
-                pendingWidgetPage = pageIndex;
-                pendingWidgetCol = col;
-                pendingWidgetRow = row;
-                startActivityForResult(new Intent(this, WidgetPickerActivity.class), REQ_PICK_WIDGET_PROVIDER);
+                startWidgetPicker(pageIndex, col, row, null);
             }
             return true;
         });
         menu.show();
+    }
+
+    private void startWidgetPicker(int pageIndex, int col, int row, String onlyPackage) {
+        pendingWidgetPage = pageIndex;
+        pendingWidgetCol = col;
+        pendingWidgetRow = row;
+        Intent intent = new Intent(this, WidgetPickerActivity.class);
+        if (onlyPackage != null) intent.putExtra(WidgetPickerActivity.EXTRA_PACKAGE, onlyPackage);
+        startActivityForResult(intent, REQ_PICK_WIDGET_PROVIDER);
     }
 
     private void addAppToFirstFreeCell(AppInfo app) {
@@ -1264,7 +1279,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ovDelete = ovButton(R.drawable.ic_trash, R.string.ov_delete_page, v -> deletePage());
         ovWidget = ovButton(R.drawable.ic_add_circle, R.string.ov_add_item, v -> {
             int g = pager.getCurrentItem() - 1;
-            if (g >= 0) showAddItemMenu(gridPages.get(g), g, 0, 0);
+            if (g >= 0) startWidgetPicker(g, 0, 0, null);
         });
         ovRow.addView(ovTidy);
         ovRow.addView(ovDefault);
@@ -1273,46 +1288,27 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         overviewBar.addView(ovRow);
 
         FrameLayout root = (FrameLayout) findViewById(R.id.root);
-        LinearLayout chip = new LinearLayout(this);
-        chip.setOrientation(LinearLayout.HORIZONTAL);
-        chip.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        chip.setBackgroundResource(R.drawable.bg_selected);
-        chip.setPadding(dp(14), dp(8), dp(18), dp(8));
-        ImageView plus = new ImageView(this);
-        plus.setImageResource(R.drawable.ic_add);
-        plus.setColorFilter(getResources().getColor(R.color.piko_text_primary));
-        chip.addView(plus, new LinearLayout.LayoutParams(dp(18), dp(18)));
-        TextView chipText = new TextView(this);
-        chipText.setText(R.string.ov_add_page_top);
-        chipText.setTextSize(13);
-        chipText.setPadding(dp(6), 0, 0, 0);
-        chipText.setTextColor(getResources().getColor(R.color.piko_text_primary));
-        chip.addView(chipText);
-        chip.setOnClickListener(v -> addPage());
-        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
-        alp.topMargin = dp(34);
-        chip.setLayoutParams(alp);
-        ovAddPage = chip;
-        ovAddPage.setVisibility(View.GONE);
-        root.addView(ovAddPage);
 
-        ovPrev = edgeHint(R.drawable.ic_left, android.view.Gravity.START);
-        ovNext = edgeHint(R.drawable.ic_right, android.view.Gravity.END);
+        ovPrev = edgeHint(R.drawable.ic_left, android.view.Gravity.START, 0, v -> pager.setCurrentItem(pager.getCurrentItem() - 1, true));
+        ovNext = edgeHint(R.drawable.ic_right, android.view.Gravity.END, 0, v -> pager.setCurrentItem(pager.getCurrentItem() + 1, true));
+        ovAddLeft = edgeHint(R.drawable.ic_add_circle, android.view.Gravity.START, 44, v -> addPage(0));
+        ovAddPage = edgeHint(R.drawable.ic_add_circle, android.view.Gravity.END, 44, v -> addPage(gridPages.size()));
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM);
         ((FrameLayout) findViewById(R.id.root)).addView(overviewBar, lp);
     }
 
-    private View edgeHint(int iconRes, int gravity) {
+    private View edgeHint(int iconRes, int gravity, int offsetDp, View.OnClickListener click) {
         ImageView v = new ImageView(this);
         v.setImageResource(iconRes);
         v.setColorFilter(getResources().getColor(R.color.piko_text_secondary));
         v.setAlpha(0.8f);
         v.setVisibility(View.GONE);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(28), dp(28), gravity | android.view.Gravity.CENTER_VERTICAL);
-        lp.setMargins(dp(4), 0, dp(4), dp(60));
+        v.setPadding(dp(4), dp(4), dp(4), dp(4));
+        v.setOnClickListener(click);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(36), dp(36), gravity | android.view.Gravity.CENTER_VERTICAL);
+        lp.setMargins(0, 0, 0, dp(60 - offsetDp * 2));
         ((FrameLayout) findViewById(R.id.root)).addView(v, lp);
         return v;
     }
@@ -1339,9 +1335,43 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         return b;
     }
 
+    private float ovDownX, ovDownY;
+    private boolean ovTap;
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (overview) {
+            switch (ev.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN: {
+                    android.graphics.Rect r = new android.graphics.Rect();
+                    ovTap = pagerRoot.getGlobalVisibleRect(r) && r.contains((int) ev.getRawX(), (int) ev.getRawY());
+                    ovDownX = ev.getRawX();
+                    ovDownY = ev.getRawY();
+                    break;
+                }
+                case MotionEvent.ACTION_MOVE:
+                    if (ovTap && Math.hypot(ev.getRawX() - ovDownX, ev.getRawY() - ovDownY) > dp(10)) ovTap = false;
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (ovTap && ev.getEventTime() - ev.getDownTime() < 400) {
+                        ovTap = false;
+                        MotionEvent c = MotionEvent.obtain(ev);
+                        c.setAction(MotionEvent.ACTION_CANCEL);
+                        super.dispatchTouchEvent(c);
+                        c.recycle();
+                        exitOverview();
+                        return true;
+                    }
+                    break;
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
     private void enterOverview() {
         if (overview) return;
         overview = true;
+        for (HomeGridLayout g : gridPages) g.setLongPressEnabled(false);
         searchInput.clearFocus();
         hideKeyboard();
         pagerRoot.setBackgroundResource(R.drawable.bg_page_card);
@@ -1357,10 +1387,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void exitOverview() {
         if (!overview) return;
         overview = false;
+        for (HomeGridLayout g : gridPages) g.setLongPressEnabled(true);
         pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .withEndAction(() -> pagerRoot.setBackground(null)).start();
         overviewBar.animate().alpha(0f).setDuration(180).withEndAction(() -> overviewBar.setVisibility(View.GONE)).start();
         ovAddPage.setVisibility(View.GONE);
+        ovAddLeft.setVisibility(View.GONE);
         ovPrev.setVisibility(View.GONE);
         ovNext.setVisibility(View.GONE);
     }
@@ -1378,7 +1410,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ovDefault.setVisibility(idx == prefs.defaultPage() ? View.GONE : View.VISIBLE);
         ovDelete.setVisibility(g >= 0 && gridPages.size() > 1 ? View.VISIBLE : View.GONE);
         ovWidget.setVisibility(g >= 0 ? View.VISIBLE : View.GONE);
-        ovAddPage.setVisibility(gridPages.size() < 8 ? View.VISIBLE : View.GONE);
+        boolean room = gridPages.size() < 8;
+        ovAddPage.setVisibility(room && idx == gridPages.size() ? View.VISIBLE : View.GONE);
+        ovAddLeft.setVisibility(room && idx <= 1 ? View.VISIBLE : View.GONE);
         ovPrev.setVisibility(idx > 0 ? View.VISIBLE : View.GONE);
         ovNext.setVisibility(idx < gridPages.size() ? View.VISIBLE : View.GONE);
     }
@@ -1401,12 +1435,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         updateOverviewTitle();
     }
 
-    private void addPage() {
+    /** Inserts an empty grid page at {@code at} (0-based among grid pages) and shows it. */
+    private void addPage(int at) {
         if (gridPages.size() >= 8) {
             Toast.makeText(this, "Up to 8 pages", Toast.LENGTH_SHORT).show();
             return;
         }
-        int at = pager.getCurrentItem();   // new grid page index = at (inserted right after the current one)
         for (HomeItem it : homeItems) if (it.page >= at) it.page++;
         rebuildGridPages(gridPages.size() + 1, at + 1);
     }

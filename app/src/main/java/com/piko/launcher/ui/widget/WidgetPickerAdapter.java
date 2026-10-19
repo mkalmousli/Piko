@@ -14,15 +14,42 @@ import com.piko.launcher.R;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** Groups installed widget providers by owning app; each child row shows a live preview. */
 public final class WidgetPickerAdapter extends BaseExpandableListAdapter {
 
     private final Context context;
     private List<WidgetProviderGroup> groups = new ArrayList<>();
+    private final ConcurrentHashMap<String, String> labels = new ConcurrentHashMap<>();
+    private final android.util.LruCache<String, Drawable> previews = new android.util.LruCache<>(48);
+    private final ExecutorService loader = Executors.newFixedThreadPool(2);
+    private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
 
     public WidgetPickerAdapter(Context context) {
         this.context = context;
+    }
+
+    /** Widget label, loaded once per provider (safe to call from any thread). */
+    public String label(AppWidgetProviderInfo info) {
+        String key = info.provider.flattenToString();
+        String l = labels.get(key);
+        if (l == null) {
+            try {
+                l = info.loadLabel(context.getPackageManager());
+            } catch (Exception e) {
+                l = info.provider.getShortClassName();
+            }
+            if (l == null) l = info.provider.getShortClassName();
+            labels.put(key, l);
+        }
+        return l;
+    }
+
+    public void shutdown() {
+        loader.shutdownNow();
     }
 
     public void submit(List<WidgetProviderGroup> newGroups) {
@@ -90,9 +117,23 @@ public final class WidgetPickerAdapter extends BaseExpandableListAdapter {
         TextView label = view.findViewById(R.id.widget_label);
         TextView size = view.findViewById(R.id.widget_size);
 
-        label.setText(info.loadLabel(context.getPackageManager()));
+        label.setText(label(info));
         size.setText(info.minWidth + "×" + info.minHeight + " dp");
-        preview.setImageDrawable(loadPreview(info));
+        final String key = info.provider.flattenToString();
+        preview.setTag(key);
+        Drawable cached = previews.get(key);
+        if (cached != null) {
+            preview.setImageDrawable(cached);
+        } else {
+            preview.setImageDrawable(null);
+            loader.execute(() -> {
+                Drawable d = loadPreview(info);
+                previews.put(key, d);
+                main.post(() -> {
+                    if (key.equals(preview.getTag())) preview.setImageDrawable(d);
+                });
+            });
+        }
         return view;
     }
 

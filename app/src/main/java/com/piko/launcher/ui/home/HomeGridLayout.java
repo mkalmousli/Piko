@@ -96,6 +96,7 @@ public final class HomeGridLayout extends ViewGroup {
     private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private float downX, downY;
+    private boolean longPressEnabled = true;
     private boolean longPressArmed;
     private boolean longPressFired;
     private Runnable pendingLongPress;
@@ -386,7 +387,13 @@ public final class HomeGridLayout extends ViewGroup {
         return null;
     }
 
+    public void setLongPressEnabled(boolean enabled) {
+        longPressEnabled = enabled;
+        if (!enabled) cancelPendingLongPress();
+    }
+
     private void scheduleLongPress(float x, float y) {
+        if (!longPressEnabled) return;
         downX = x;
         downY = y;
         longPressArmed = true;
