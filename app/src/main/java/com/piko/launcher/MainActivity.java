@@ -1495,6 +1495,15 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ovWidget = ovButton(R.drawable.ic_add_circle, R.string.ov_add_item, v -> {
             startWidgetPicker(pager.getCurrentItem(), 0, 0, null);
         });
+        ovStripScroll = new android.widget.HorizontalScrollView(this);
+        ovStripScroll.setHorizontalScrollBarEnabled(false);
+        ovStripScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        ovStrip = new LinearLayout(this);
+        ovStrip.setOrientation(LinearLayout.HORIZONTAL);
+        ovStrip.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        ovStrip.setPadding(dp(8), dp(2), dp(8), dp(8));
+        ovStripScroll.addView(ovStrip);
+        overviewBar.addView(ovStripScroll);
         ovRow.addView(ovTidy);
         ovRow.addView(ovDefault);
         ovRow.addView(ovDelete);
@@ -1549,6 +1558,119 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         return b;
     }
 
+    private android.widget.HorizontalScrollView ovStripScroll;
+    private LinearLayout ovStrip;
+    private View dragCard;
+    private float dragStartRawX;
+    private int dragFrom = -1;
+
+    /** Rebuilds the row of page thumbnails (tap = edit that page, hold + drag = reorder, trailing + = add). */
+    private void refreshStrip() {
+        if (ovStrip == null || dragCard != null) return;
+        ovStrip.removeAllViews();
+        int n = gridPages.size();
+        int cur = pager.getCurrentItem();
+        int home = n > 1 ? defaultIndex() : -1;
+        for (int i = 0; i < n; i++) {
+            final int index = i;
+            com.piko.launcher.ui.home.PageThumbView thumb = new com.piko.launcher.ui.home.PageThumbView(this);
+            thumb.bind(homeItems, i, prefs.columns(), prefs.rows(), i == cur, i == home);
+            thumb.setTag(i);
+            thumb.setOnClickListener(v -> pager.setCurrentItem(index, true));
+            thumb.setOnLongClickListener(v -> {
+                if (gridPages.size() < 2) return false;
+                dragCard = v;
+                dragFrom = (int) v.getTag();
+                dragStartRawX = lastStripRawX;
+                dragStartScroll = ovStripScroll.getScrollX();
+                dragTarget = dragFrom;
+                v.setElevation(dp(8));
+                v.setScaleX(1.1f);
+                v.setScaleY(1.1f);
+                ovStripScroll.requestDisallowInterceptTouchEvent(true);
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                return true;
+            });
+            thumb.setOnTouchListener((v, ev) -> {
+                lastStripRawX = ev.getRawX();
+                if (dragCard != v) return false;
+                switch (ev.getActionMasked()) {
+                    case MotionEvent.ACTION_MOVE: dragStripCard(ev.getRawX()); return true;
+                    case MotionEvent.ACTION_UP:
+                    case MotionEvent.ACTION_CANCEL: dropStripCard(); return true;
+                }
+                return true;
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(52), dp(104));
+            lp.setMargins(dp(5), 0, dp(5), 0);
+            ovStrip.addView(thumb, lp);
+        }
+        if (n < 8) {
+            ImageView plus = new ImageView(this);
+            plus.setImageResource(R.drawable.ic_add_circle);
+            plus.setColorFilter(getResources().getColor(R.color.piko_accent));
+            plus.setPadding(dp(14), dp(14), dp(14), dp(14));
+            plus.setBackgroundResource(R.drawable.bg_pressable);
+            plus.setOnClickListener(v -> addPage(gridPages.size()));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(52), dp(52));
+            lp.setMargins(dp(5), 0, dp(5), 0);
+            ovStrip.addView(plus, lp);
+        }
+        final int sel = cur;
+        ovStripScroll.post(() -> {
+            View c = ovStrip.getChildAt(sel);
+            if (c != null) ovStripScroll.smoothScrollTo(Math.max(0, c.getLeft() - (ovStripScroll.getWidth() - c.getWidth()) / 2), 0);
+        });
+    }
+
+    private float lastStripRawX;
+
+    private int dragTarget;
+    private int dragStartScroll;
+
+    private void dragStripCard(float rawX) {
+        float slot = dragCard.getWidth() + dp(10);
+        float dx = rawX - dragStartRawX + (ovStripScroll.getScrollX() - dragStartScroll);
+        dragCard.setTranslationX(dx);
+        // Other cards slide aside, so the dragged view itself is never re-parented mid-gesture.
+        dragTarget = Math.max(0, Math.min(gridPages.size() - 1, Math.round(dragFrom + dx / slot)));
+        for (int i = 0; i < gridPages.size(); i++) {
+            if (i == dragFrom) continue;
+            View c = ovStrip.getChildAt(i);
+            float shift = 0;
+            if (dragFrom < dragTarget && i > dragFrom && i <= dragTarget) shift = -slot;
+            else if (dragFrom > dragTarget && i >= dragTarget && i < dragFrom) shift = slot;
+            c.animate().translationX(shift).setDuration(120).start();
+        }
+        // Keep the strip scrolling while the finger sits at an edge.
+        int[] loc = new int[2];
+        ovStripScroll.getLocationOnScreen(loc);
+        if (rawX < loc[0] + dp(40)) ovStripScroll.scrollBy(-dp(8), 0);
+        else if (rawX > loc[0] + ovStripScroll.getWidth() - dp(40)) ovStripScroll.scrollBy(dp(8), 0);
+    }
+
+    private void dropStripCard() {
+        int to = dragTarget;
+        int from = dragFrom;
+        dragCard = null;
+        dragFrom = -1;
+        if (to == from) {
+            refreshStrip();
+            return;
+        }
+        int[] map = new int[gridPages.size()];
+        for (int i = 0; i < map.length; i++) {
+            int v = i;
+            if (i == from) v = to;
+            else if (from < to && i > from && i <= to) v = i - 1;
+            else if (from > to && i >= to && i < from) v = i + 1;
+            map[i] = v;
+        }
+        for (HomeItem it : homeItems) if (it.page >= 0 && it.page < map.length) it.page = map[it.page];
+        prefs.setDefaultPage(map[Math.min(prefs.defaultPage(), map.length - 1)]);
+        rebuildGridPages(gridPages.size(), to);
+    }
+
     private float ovDownX, ovDownY;
     private boolean ovTap;
 
@@ -1585,11 +1707,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void enterOverview() {
         if (overview) return;
         overview = true;
+        pager.setSwipeEnabled(false);
         for (HomeGridLayout g : gridPages) g.setLongPressEnabled(false);
         searchInput.clearFocus();
         hideKeyboard();
         pagerRoot.setBackgroundResource(R.drawable.bg_page_card);
-        pagerRoot.animate().scaleX(0.74f).scaleY(0.74f).translationY(dp(24)).setDuration(240)
+        pagerRoot.animate().scaleX(0.62f).scaleY(0.62f).translationY(-dp(16)).setDuration(240)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         overviewBar.setAlpha(0f);
         overviewBar.setVisibility(View.VISIBLE);
@@ -1601,6 +1724,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void exitOverview() {
         if (!overview) return;
         overview = false;
+        pager.setSwipeEnabled(true);
         for (HomeGridLayout g : gridPages) g.setLongPressEnabled(true);
         pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .withEndAction(() -> pagerRoot.setBackground(null)).start();
@@ -1626,10 +1750,11 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ovDelete.setVisibility(n > 1 ? View.VISIBLE : View.GONE);
         ovWidget.setVisibility(View.VISIBLE);
         boolean room = n < 8;
-        ovAddPage.setVisibility(room && idx == n - 1 ? View.VISIBLE : View.GONE);
-        ovAddLeft.setVisibility(room && idx == 0 ? View.VISIBLE : View.GONE);
-        ovPrev.setVisibility(idx > 0 ? View.VISIBLE : View.GONE);
-        ovNext.setVisibility(idx < n - 1 ? View.VISIBLE : View.GONE);
+        ovAddPage.setVisibility(View.GONE);
+        ovAddLeft.setVisibility(View.GONE);
+        ovPrev.setVisibility(View.GONE);
+        ovNext.setVisibility(View.GONE);
+        refreshStrip();
     }
 
     private int defaultIndex() {
@@ -1674,10 +1799,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         int n = 0;
         for (HomeItem it : homeItems) if (it.page == g) n++;
         final int count = n;
-        new AlertDialog.Builder(this)
-                .setTitle("Delete page " + (g + 1) + "?")
-                .setMessage(count == 0 ? "This page is empty." : count + " item(s) on it will be removed.")
-                .setPositiveButton(R.string.action_remove, (d, w) -> {
+        android.content.DialogInterface.OnClickListener doDelete = (d, w) -> {
                     List<HomeItem> keep = new ArrayList<>();
                     for (HomeItem it : homeItems) {
                         if (it.page == g) {
@@ -1691,7 +1813,15 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     int def = prefs.defaultPage();
                     prefs.setDefaultPage(def > g ? def - 1 : def == g ? 0 : def);
                     rebuildGridPages(gridPages.size() - 1, Math.min(g, gridPages.size() - 2));
-                })
+        };
+        if (count == 0) {
+            doDelete.onClick(null, 0);
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Delete page " + (g + 1) + "?")
+                .setMessage(count + " item(s) on it will be removed.")
+                .setPositiveButton(R.string.action_remove, doDelete)
                 .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }

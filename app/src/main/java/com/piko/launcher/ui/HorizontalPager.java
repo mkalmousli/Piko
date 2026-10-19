@@ -119,8 +119,15 @@ public final class HorizontalPager extends ViewGroup {
         scrollTo(currentItem * width, 0);
     }
 
+    private boolean swipeEnabled = true;
+
+    public void setSwipeEnabled(boolean enabled) {
+        swipeEnabled = enabled;
+    }
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
+        if (!swipeEnabled) return false;
         switch (ev.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downX = lastX = ev.getX();
