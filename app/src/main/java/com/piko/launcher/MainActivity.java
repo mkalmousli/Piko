@@ -547,7 +547,11 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     // -------------------------------------------------------------- search
 
+    private String lastQuery = "";
+
     private void filterAndShow(String query) {
+        if (!query.equals(lastQuery)) expandedContacts.clear();
+        lastQuery = query;
         boolean idle = query.isEmpty();
         if (!idle && overview) exitOverview();
         currentResults = searchEngine.searchAll(
@@ -615,7 +619,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         renderResults(idle);
     }
 
-    /** Turns each contact into one row per enabled action (call, SMS, WhatsApp...), keeping ranking order. */
+    private final java.util.Set<String> expandedContacts = new java.util.HashSet<>();
+
+    /** Shows each contact as one row; tapping it expands one row per enabled action (call, SMS, WhatsApp...), keeping ranking order. */
     private List<SearchResult> explodeContacts(List<SearchResult> in, String query) {
         List<SearchResult> out = new ArrayList<>();
         for (SearchResult r : in) {
@@ -627,6 +633,18 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             final String who = c.name.equals(c.phoneNumber) ? c.phoneNumber : c.name;
             final String sub = c.name.equals(c.phoneNumber) ? "" : c.phoneNumber;
             final String q = query;
+            final String key = SearchEngine.contactKey(c);
+            if (!expandedContacts.contains(key)) {
+                out.add(SearchResult.forAction(null, who, sub, () -> {
+                    expandedContacts.add(key);
+                    filterAndShow(searchInput.getText().toString());
+                }).withIcon(R.drawable.ic_person));
+                continue;
+            }
+            out.add(SearchResult.forAction(null, who, sub, () -> {
+                expandedContacts.remove(key);
+                filterAndShow(searchInput.getText().toString());
+            }).withIcon(R.drawable.ic_person));
             if (prefs.flag(Prefs.FLAG_ACTION_CALL)) out.add(contactAction("call", c.phoneNumber, getString(R.string.act_call, who), sub, c, q,
                     () -> doCall(c.phoneNumber)));
             if (prefs.flag(Prefs.FLAG_ACTION_SMS)) out.add(contactAction("sms", c.phoneNumber, getString(R.string.act_sms, who), sub, c, q,
