@@ -75,7 +75,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private HorizontalPager pager;
     private FrameLayout pagerRoot;
-    private LinearLayout overviewBar;
+    private LinearLayout overviewBar, overviewTop;
     private TextView overviewTitle;
     private LinearLayout ovRow;
     private View ovTidy, ovDefault, ovDelete, ovWidget, ovAddPage, ovAddLeft, ovPrev, ovNext;
@@ -1481,7 +1481,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         overviewTitle.setTextSize(12);
         overviewTitle.setGravity(android.view.Gravity.CENTER);
         overviewTitle.setPadding(0, 0, 0, dp(6));
-        overviewBar.addView(overviewTitle);
+        overviewTop = new LinearLayout(this);
+        overviewTop.setOrientation(LinearLayout.VERTICAL);
+        overviewTop.setBackgroundColor(getResources().getColor(R.color.piko_bg));
+        overviewTop.setPadding(dp(8), dp(8), dp(8), dp(4));
+        overviewTop.setVisibility(View.GONE);
+        overviewTop.addView(overviewTitle);
 
         ovRow = new LinearLayout(this);
         ovRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -1503,7 +1508,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ovStrip.setGravity(android.view.Gravity.CENTER_VERTICAL);
         ovStrip.setPadding(dp(8), dp(2), dp(8), dp(8));
         ovStripScroll.addView(ovStrip);
-        overviewBar.addView(ovStripScroll);
+        overviewTop.addView(ovStripScroll);
         ovRow.addView(ovTidy);
         ovRow.addView(ovDefault);
         ovRow.addView(ovDelete);
@@ -1520,6 +1525,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM);
         ((FrameLayout) findViewById(R.id.root)).addView(overviewBar, lp);
+        ((FrameLayout) findViewById(R.id.root)).addView(overviewTop, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.TOP));
     }
 
     private View edgeHint(int iconRes, int gravity, int offsetDp, View.OnClickListener click) {
@@ -1712,11 +1719,25 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         searchInput.clearFocus();
         hideKeyboard();
         pagerRoot.setBackgroundResource(R.drawable.bg_page_card);
-        pagerRoot.animate().scaleX(0.62f).scaleY(0.62f).translationY(-dp(16)).setDuration(240)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         overviewBar.setAlpha(0f);
         overviewBar.setVisibility(View.VISIBLE);
         overviewBar.animate().alpha(1f).setDuration(240).start();
+        overviewTop.setAlpha(0f);
+        overviewTop.setVisibility(View.VISIBLE);
+        overviewTop.animate().alpha(1f).setDuration(240).start();
+        // Fit the zoomed page into whatever the top strip and bottom buttons leave free.
+        View rootView = findViewById(R.id.root);
+        rootView.post(() -> {
+            if (!overview) return;
+            overviewTop.measure(View.MeasureSpec.makeMeasureSpec(rootView.getWidth(), View.MeasureSpec.EXACTLY), 0);
+            overviewBar.measure(View.MeasureSpec.makeMeasureSpec(rootView.getWidth(), View.MeasureSpec.EXACTLY), 0);
+            int top = overviewTop.getMeasuredHeight(), bottom = overviewBar.getMeasuredHeight();
+            float rh = Math.max(1, pagerRoot.getHeight());
+            float scale = Math.max(0.5f, Math.min(0.9f, (rootView.getHeight() - top - bottom - dp(12)) / rh));
+            float ty = (top - bottom) / 2f;
+            pagerRoot.animate().scaleX(scale).scaleY(scale).translationY(ty).setDuration(240)
+                    .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+        });
         pager.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
         updateOverviewTitle();
     }
@@ -1729,6 +1750,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .withEndAction(() -> pagerRoot.setBackground(null)).start();
         overviewBar.animate().alpha(0f).setDuration(180).withEndAction(() -> overviewBar.setVisibility(View.GONE)).start();
+        overviewTop.animate().alpha(0f).setDuration(180).withEndAction(() -> overviewTop.setVisibility(View.GONE)).start();
         ovAddPage.setVisibility(View.GONE);
         ovAddLeft.setVisibility(View.GONE);
         ovPrev.setVisibility(View.GONE);
