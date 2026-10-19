@@ -5,10 +5,25 @@
     android:layout_height="match_parent"
     android:background="@color/piko_bg">
 
-    <FrameLayout
-        android:id="@+id/pager_root"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:id="@+id/pager_root"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <FrameLayout
+            android:id="@+id/search_bar_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:paddingBottom="10dp" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/page_indicator"

@@ -38,10 +38,10 @@ public final class ContactIndexer {
     private final CopyOnWriteArrayList<ContactInfo> contacts = new CopyOnWriteArrayList<>();
     private final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
     private final AtomicBoolean loaded = new AtomicBoolean(false);
+    private final AtomicBoolean observerRegistered = new AtomicBoolean(false);
 
     private ContactIndexer(Context context) {
         this.appContext = context.getApplicationContext();
-        registerContentObserver();
     }
 
     public static synchronized ContactIndexer get(Context context) {
@@ -63,6 +63,9 @@ public final class ContactIndexer {
     }
 
     public void loadAsync() {
+        if (PermissionUtil.has(appContext, android.Manifest.permission.READ_CONTACTS)) {
+            registerContentObserver();
+        }
         if (!PermissionUtil.has(appContext, android.Manifest.permission.READ_CONTACTS)) {
             contacts.clear();
             loaded.set(true);
@@ -112,6 +115,7 @@ public final class ContactIndexer {
     }
 
     private void registerContentObserver() {
+        if (!observerRegistered.compareAndSet(false, true)) return;
         appContext.getContentResolver().registerContentObserver(
                 ContactsContract.Contacts.CONTENT_URI, true,
                 new ContentObserver(mainHandler) {

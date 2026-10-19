@@ -81,6 +81,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private HorizontalPager pager;
     private LinearLayout pageIndicator;
     private EditText searchInput;
+    private View resultsOverlay;
     private ListView resultsList;
     private TextView emptyText;
     private FrameLayout idleWidgetArea;
@@ -167,8 +168,21 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         dockScroll = page.findViewById(R.id.dock_scroll);
         dockContainer = page.findViewById(R.id.dock_container);
         ImageButton settingsButton = page.findViewById(R.id.btn_settings);
+        ImageButton moreButton = page.findViewById(R.id.btn_more);
 
-        searchWidgetGrid = createGrid(PAGE_SEARCH_WIDGETS, prefs.columns(), 2);
+        // The search bar is shared by every page, so it lives outside the pager.
+        View searchBar = page.findViewById(R.id.search_bar);
+        ((ViewGroup) searchBar.getParent()).removeView(searchBar);
+        ((ViewGroup) findViewById(R.id.search_bar_container)).addView(searchBar);
+
+        // Results are an overlay above the pager, shown only while typing; page 0 is a normal grid page.
+        resultsOverlay = page.findViewById(R.id.results_overlay);
+        ((ViewGroup) resultsOverlay.getParent()).removeView(resultsOverlay);
+        resultsOverlay.setVisibility(View.GONE);
+        ((FrameLayout) findViewById(R.id.pager_root)).addView(resultsOverlay, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        searchWidgetGrid = createGrid(PAGE_SEARCH_WIDGETS, prefs.columns(), prefs.rows());
         idleWidgetArea.addView(searchWidgetGrid);
 
         searchAdapter = new SearchResultAdapter(this, new SearchResultAdapter.Listener() {
@@ -225,7 +239,24 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             }
         });
 
+        // The results overlay is not inside the pager, so only vertical drift matters, but still
+        // veto the long-press if the finger moved so scrolling the list never opens a menu.
+        final float[] listDown = new float[2];
+        final boolean[] listMoved = new boolean[1];
+        final int listSlop = Math.max(4, android.view.ViewConfiguration.get(this).getScaledTouchSlop() / 2);
+        resultsList.setOnTouchListener((v, ev) -> {
+            if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                listDown[0] = ev.getX();
+                listDown[1] = ev.getY();
+                listMoved[0] = false;
+            } else if (ev.getActionMasked() == android.view.MotionEvent.ACTION_MOVE
+                    && (Math.abs(ev.getX() - listDown[0]) > listSlop || Math.abs(ev.getY() - listDown[1]) > listSlop)) {
+                listMoved[0] = true;
+            }
+            return false;
+        });
         resultsList.setOnItemLongClickListener((AdapterView<?> parent, View v, int position, long id) -> {
+            if (listMoved[0]) return true;
             SearchResult result = searchAdapter.getResultAt(position);
             if (result.type == SearchResult.TYPE_APP) {
                 showAppOptionsMenu(v, result.app);
@@ -235,6 +266,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         });
 
         settingsButton.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        moreButton.setOnClickListener(this::showMoreMenu);
 
         return page;
     }
@@ -265,7 +297,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         grid.setCallbacks(new HomeGridLayout.Callbacks() {
             @Override
             public void onEmptyCellLongPress(int col, int row) {
-                showAddItemMenu(grid, pageId, col, row);
+                // Adding items lives in the search bar's "more" menu; long-press only opens item menus.
             }
 
             @Override
@@ -280,6 +312,20 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             public void onItemRemoveRequested(View child) {
                 HomeItem item = (HomeItem) child.getTag();
                 removeHomeItem(grid, item, child);
+            }
+
+            @Override
+            public void onItemDragToPage(View child, int direction) {
+                moveItemToAdjacentPage(grid, child, direction);
+            }
+
+            @Override
+            public void onItemResized(View child) {
+                HomeItem item = (HomeItem) child.getTag();
+                HomeGridLayout.GridLayoutParams lp = (HomeGridLayout.GridLayoutParams) child.getLayoutParams();
+                item.colSpan = lp.colSpan;
+                item.rowSpan = lp.rowSpan;
+                layoutStore.saveAll(homeItems);
             }
 
             @Override
@@ -342,11 +388,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void filterAndShow(String query) {
         boolean idle = query.isEmpty();
-        currentResults = searchEngine.searchAll(currentApps, currentContacts, query);
+        currentResults = searchEngine.searchAll(
+                prefs.flag(Prefs.FLAG_SEARCH_APPS) ? currentApps : new ArrayList<>(),
+                prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) ? currentContacts : new ArrayList<>(), query);
 
         if (!idle) {
             String trimmed = query.trim();
-            if (com.piko.launcher.core.CurrencyConverter.looksLikeConversion(trimmed)) {
+            if (prefs.flag(Prefs.FLAG_SEARCH_CURRENCY) && com.piko.launcher.core.CurrencyConverter.looksLikeConversion(trimmed)) {
                 currentResults.add(0, SearchResult.forCalc(trimmed, null));
                 com.piko.launcher.core.CurrencyConverter.convertAsync(trimmed, new com.piko.launcher.core.CurrencyConverter.Callback() {
                     @Override
@@ -361,13 +409,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     public void onFailure(String forQuery) {
                     }
                 });
-            } else if (com.piko.launcher.core.MathEval.looksLikeExpression(trimmed)) {
+            } else if (prefs.flag(Prefs.FLAG_SEARCH_CALC) && com.piko.launcher.core.MathEval.looksLikeExpression(trimmed)) {
                 Double value = com.piko.launcher.core.MathEval.evaluate(trimmed);
                 if (value != null) {
                     currentResults.add(0, SearchResult.forCalc(trimmed, com.piko.launcher.core.MathEval.format(value)));
                 }
             }
-            if (currentResults.isEmpty() || (currentResults.size() == 1 && currentResults.get(0).type == SearchResult.TYPE_CALC)) {
+            if (prefs.flag(Prefs.FLAG_SEARCH_WEB) && (currentResults.isEmpty() || (currentResults.size() == 1 && currentResults.get(0).type == SearchResult.TYPE_CALC))) {
                 currentResults.add(SearchResult.forWeb(trimmed));
             }
         }
@@ -382,9 +430,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         searchAdapter.submit(display, searchInput.getText().toString());
 
         boolean hasResults = !currentResults.isEmpty();
-        resultsList.setVisibility(!idle && hasResults ? View.VISIBLE : View.GONE);
-        emptyText.setVisibility(!idle && !hasResults ? View.VISIBLE : View.GONE);
-        idleWidgetArea.setVisibility(idle ? View.VISIBLE : View.GONE);
+        resultsOverlay.setVisibility(idle ? View.GONE : View.VISIBLE);
+        resultsList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
+        emptyText.setVisibility(!hasResults ? View.VISIBLE : View.GONE);
         refreshShortcutsRow(idle);
     }
 
@@ -426,6 +474,36 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private HomeGridLayout gridForPage(int pageId) {
         return pageId == PAGE_SEARCH_WIDGETS ? searchWidgetGrid : gridPages.get(pageId);
+    }
+
+    private void showMoreMenu(View anchor) {
+        PopupMenu menu = new PopupMenu(this, anchor);
+        menu.getMenu().add(0, 1, 0, R.string.menu_add_app);
+        menu.getMenu().add(0, 2, 1, R.string.menu_add_widget);
+        menu.getMenu().add(0, 3, 2, R.string.menu_manage_apps);
+        menu.setOnMenuItemClickListener(m -> {
+            int idx = pager.getCurrentItem();
+            int pageId = idx == 0 ? PAGE_SEARCH_WIDGETS : idx - 1;
+            if (m.getItemId() == 3) {
+                showAppChooser((app, v, dialog) -> showAppOptionsMenu(v, app));
+                return true;
+            }
+            int[] free = findFreeArea(gridForPage(pageId), 1, 1);
+            if (free == null) {
+                Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            if (m.getItemId() == 1) {
+                showAppPickerDialog(pageId, free[0], free[1]);
+            } else {
+                pendingWidgetPage = pageId;
+                pendingWidgetCol = free[0];
+                pendingWidgetRow = free[1];
+                startActivityForResult(new Intent(this, WidgetPickerActivity.class), REQ_PICK_WIDGET_PROVIDER);
+            }
+            return true;
+        });
+        menu.show();
     }
 
     private void showAddItemMenu(HomeGridLayout grid, int pageIndex, int col, int row) {
@@ -473,12 +551,40 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         }
     }
 
+    private interface AppChooserListener {
+        void onPick(AppInfo app, View anchor, AlertDialog dialog);
+    }
+
     private void showAppPickerDialog(int pageIndex, int col, int row) {
+        showAppChooser((app, v, dialog) -> {
+            HomeItem item = new HomeItem();
+            item.type = HomeItem.TYPE_APP;
+            item.page = pageIndex;
+            item.col = col;
+            item.row = row;
+            item.packageName = app.packageName;
+            item.activityName = app.activityName;
+            item.label = app.label;
+            homeItems.add(item);
+            layoutStore.saveAll(homeItems);
+
+            HomeGridLayout grid = gridForPage(pageIndex);
+            View view = HomeIconViewFactory.createAppIcon(this, item);
+            view.setOnClickListener(v2 -> IntentUtil.launchApp(this, toAppInfo(item)));
+            grid.addView(view, grid.gridParams(col, row, 1, 1));
+
+            dialog.dismiss();
+        });
+    }
+
+    private void showAppChooser(AppChooserListener listener) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.page_search, null, false);
         EditText input = dialogView.findViewById(R.id.search_input);
         ListView list = dialogView.findViewById(R.id.results_list);
         dialogView.findViewById(R.id.btn_settings).setVisibility(View.GONE);
+        dialogView.findViewById(R.id.btn_more).setVisibility(View.GONE);
         dialogView.findViewById(R.id.dock_scroll).setVisibility(View.GONE);
+        dialogView.findViewById(R.id.idle_widget_area).setVisibility(View.GONE);
 
         AppListAdapter adapter = new AppListAdapter(this);
         adapter.submit(searchEngine.search(currentApps, ""));
@@ -503,26 +609,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             }
         });
 
-        list.setOnItemClickListener((parent, v, position, id) -> {
-            AppInfo app = adapter.getAppAt(position);
-            HomeItem item = new HomeItem();
-            item.type = HomeItem.TYPE_APP;
-            item.page = pageIndex;
-            item.col = col;
-            item.row = row;
-            item.packageName = app.packageName;
-            item.activityName = app.activityName;
-            item.label = app.label;
-            homeItems.add(item);
-            layoutStore.saveAll(homeItems);
-
-            HomeGridLayout grid = gridForPage(pageIndex);
-            View view = HomeIconViewFactory.createAppIcon(this, item);
-            view.setOnClickListener(v2 -> IntentUtil.launchApp(this, toAppInfo(item)));
-            grid.addView(view, grid.gridParams(col, row, 1, 1));
-
-            dialog.dismiss();
-        });
+        list.setOnItemClickListener((parent, v, position, id) ->
+                listener.onPick(adapter.getAppAt(position), v, dialog));
 
         dialog.show();
     }
@@ -688,15 +776,32 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         menu.show();
     }
 
-    private void resizeWidget(HomeGridLayout grid, HomeItem item, View child) {
-        int newColSpan = (item.colSpan % grid.getColumns()) + 1;
-        if (!grid.isAreaFree(item.col, item.row, newColSpan, item.rowSpan, child)) {
+    /** Drag-to-edge page move: keeps the cell if free on the neighbouring page, else the first free area. */
+    private void moveItemToAdjacentPage(HomeGridLayout source, View child, int direction) {
+        HomeItem item = (HomeItem) child.getTag();
+        int targetIdx = item.page + 1 + direction;
+        if (targetIdx < 0 || targetIdx > gridPages.size()) return;
+        int targetPage = targetIdx - 1;
+        HomeGridLayout target = gridForPage(targetPage);
+        int[] cell = target.isAreaFree(item.col, item.row, item.colSpan, item.rowSpan, null)
+                ? new int[]{item.col, item.row}
+                : findFreeArea(target, item.colSpan, item.rowSpan);
+        if (cell == null) {
             Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
             return;
         }
-        item.colSpan = newColSpan;
-        grid.updateViewParams(child, grid.gridParams(item.col, item.row, item.colSpan, item.rowSpan));
+        source.removeView(child);
+        item.page = targetPage;
+        item.col = cell[0];
+        item.row = cell[1];
         layoutStore.saveAll(homeItems);
+        target.addView(child, target.gridParams(item.col, item.row, item.colSpan, item.rowSpan));
+        pager.setCurrentItem(targetIdx, true);
+    }
+
+    private void resizeWidget(HomeGridLayout grid, HomeItem item, View child) {
+        grid.startResize(child);
+        Toast.makeText(this, R.string.resize_hint, Toast.LENGTH_SHORT).show();
     }
 
     private void showMovePagePicker(HomeGridLayout sourceGrid, HomeItem item, View child) {
@@ -820,10 +925,20 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     // -------------------------------------------------------------- index
 
+    /** Customised apps minus the ones the user hid from search. */
+    private List<AppInfo> visibleApps() {
+        java.util.Set<String> hidden = prefs.hiddenApps();
+        List<AppInfo> all = com.piko.launcher.core.AppCustomizationStore.get(this).applyAll(rawApps);
+        if (hidden.isEmpty()) return all;
+        List<AppInfo> result = new ArrayList<>(all.size());
+        for (AppInfo app : all) if (!hidden.contains(app.key())) result.add(app);
+        return result;
+    }
+
     @Override
     public void onIndexReady(List<AppInfo> apps) {
         rawApps = apps;
-        currentApps = com.piko.launcher.core.AppCustomizationStore.get(this).applyAll(rawApps);
+        currentApps = visibleApps();
         filterAndShow(searchInput.getText().toString());
     }
 
@@ -843,7 +958,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             return;
         }
         widgetHostController.startListening();
-        currentApps = com.piko.launcher.core.AppCustomizationStore.get(this).applyAll(rawApps);
+        currentApps = visibleApps();
         filterAndShow(searchInput.getText().toString());
     }
 
@@ -889,12 +1004,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     @Override
     public void onBackPressed() {
-        if (pager != null && pager.getCurrentItem() != Prefs.DEFAULT_PAGE_SEARCH) {
-            pager.setCurrentItem(Prefs.DEFAULT_PAGE_SEARCH, true);
-            return;
-        }
         if (searchInput != null && searchInput.getText().length() > 0) {
             searchInput.setText("");
+            return;
+        }
+        if (pager != null && pager.getCurrentItem() != Prefs.DEFAULT_PAGE_SEARCH) {
+            pager.setCurrentItem(Prefs.DEFAULT_PAGE_SEARCH, true);
             return;
         }
         // Home is never "closed" by back — matches standard launcher behaviour.

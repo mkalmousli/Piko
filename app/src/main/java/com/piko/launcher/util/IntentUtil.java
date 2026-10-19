@@ -155,8 +155,8 @@ public final class IntentUtil {
 
     /** Opens the given engine id (see {@link WebSearchEngines}) with the query pre-filled. */
     public static void webSearch(Context context, String engineId, String query) {
-        String base = WebSearchEngines.byId(engineId).urlPrefix;
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(base + Uri.encode(query)));
+        String url = com.piko.launcher.core.Prefs.get(context).engineById(engineId).urlFor(query);
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             context.startActivity(intent);

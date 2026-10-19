@@ -1,0 +1,15 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: input
+    attributes: {label: Device and Android version, placeholder: "Moto G7 Play, Android 10"}
+    validations: {required: true}
+  - type: input
+    attributes: {label: Piko version}
+    validations: {required: true}
+  - type: textarea
+    attributes: {label: What happened, and what did you expect?}
+    validations: {required: true}
+  - type: textarea
+    attributes: {label: Steps to reproduce}

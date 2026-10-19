@@ -9,9 +9,15 @@
     android:paddingBottom="10dp">
 
     <FrameLayout
+        android:id="@+id/results_overlay"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="12dp"
+        android:background="@color/piko_bg"
+        android:clickable="true">
 
         <ListView
             android:id="@+id/results_list"
@@ -32,15 +38,13 @@
             android:text="@string/no_results"
             android:textColor="@color/piko_text_hint"
             android:visibility="gone" />
-
-        <FrameLayout
-            android:id="@+id/idle_widget_area"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:visibility="gone" />
-
     </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/idle_widget_area"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
 
     <HorizontalScrollView
         android:id="@+id/dock_scroll"
@@ -58,6 +62,7 @@
     </HorizontalScrollView>
 
     <LinearLayout
+        android:id="@+id/search_bar"
         android:layout_width="match_parent"
         android:layout_height="46dp"
         android:layout_marginTop="8dp"
@@ -95,6 +100,14 @@
             android:background="@drawable/bg_pressable"
             android:src="@drawable/ic_gear"
             android:contentDescription="@string/menu_settings" />
+
+        <ImageButton
+            android:id="@+id/btn_more"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:background="@drawable/bg_pressable"
+            android:src="@drawable/ic_more"
+            android:contentDescription="@string/menu_more" />
     </LinearLayout>
 
 </LinearLayout>

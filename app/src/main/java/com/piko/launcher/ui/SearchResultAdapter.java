@@ -160,7 +160,7 @@ public final class SearchResultAdapter extends BaseAdapter {
         int chipSize = (int) (28 * context.getResources().getDisplayMetrics().density);
         for (String engineId : engines) {
             TextView chip = new TextView(context);
-            WebSearchEngines.Engine engine = WebSearchEngines.byId(engineId);
+            WebSearchEngines.Engine engine = Prefs.get(context).engineById(engineId);
             chip.setText(engine.label.substring(0, 1));
             chip.setTextColor(0xFFFFFFFF);
             chip.setBackgroundResource(R.drawable.bg_shortcut_chip);
@@ -201,6 +201,11 @@ public final class SearchResultAdapter extends BaseAdapter {
         holder.number.setText(contact.phoneNumber);
         holder.number.setVisibility(contact.phoneNumber.isEmpty() ? View.GONE : View.VISIBLE);
         holder.avatar.setText(contact.name.isEmpty() ? "?" : contact.name.substring(0, 1).toUpperCase());
+        Prefs prefs = Prefs.get(context);
+        holder.btnCall.setVisibility(prefs.flag(Prefs.FLAG_ACTION_CALL) ? View.VISIBLE : View.GONE);
+        holder.btnSms.setVisibility(prefs.flag(Prefs.FLAG_ACTION_SMS) ? View.VISIBLE : View.GONE);
+        holder.btnWaMessage.setVisibility(prefs.flag(Prefs.FLAG_ACTION_WA_MESSAGE) ? View.VISIBLE : View.GONE);
+        holder.btnWaCall.setVisibility(prefs.flag(Prefs.FLAG_ACTION_WA_CALL) ? View.VISIBLE : View.GONE);
         holder.btnCall.setOnClickListener(v -> {
             listener.onCall(contact.phoneNumber);
             listener.onContactActed(contact);
@@ -219,7 +224,18 @@ public final class SearchResultAdapter extends BaseAdapter {
         });
         // Tapping the row (outside the action buttons/avatar) opens the contact's own detail page.
         view.setOnClickListener(v -> {
-            IntentUtil.openContactInfo(context, contact.contactId);
+            switch (prefs.contactTapAction()) {
+                case Prefs.TAP_NONE:
+                    return;
+                case Prefs.TAP_CALL:
+                    listener.onCall(contact.phoneNumber);
+                    break;
+                case Prefs.TAP_COPY:
+                    IntentUtil.copyToClipboard(context, "number", contact.phoneNumber);
+                    break;
+                default:
+                    IntentUtil.openContactInfo(context, contact.contactId);
+            }
             listener.onContactActed(contact);
         });
         // A long press is a quick "grab the number" gesture — copy it straight away, no menu.

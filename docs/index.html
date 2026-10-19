@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piko – Minimal Search-First Android Launcher</title>
+<meta name="description" content="Piko is a tiny (~80 KB), open-source, ad-free Android launcher that opens on search: launch apps, call contacts, calculate, convert currency and search the web or AI chats in one place.">
+<meta name="keywords" content="android launcher, minimal launcher, search launcher, open source launcher, lightweight launcher, no ads launcher, privacy launcher, calculator launcher, currency converter, ChatGPT launcher, Claude launcher, Piko">
+<meta name="author" content="Mohamad Almousli">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#0E0F12">
+<link rel="canonical" href="https://mkalmousli.github.io/Piko/">
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Piko">
+<meta property="og:title" content="Piko – Minimal Search-First Android Launcher">
+<meta property="og:description" content="Tiny, open-source, ad-free Android launcher. Search apps, contacts, maths, currency and the web or AI chats from one bar.">
+<meta property="og:url" content="https://mkalmousli.github.io/Piko/">
+<meta property="og:image" content="https://mkalmousli.github.io/Piko/assets/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Piko launcher on a phone showing search and the home grid">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Piko – Minimal Search-First Android Launcher">
+<meta name="twitter:description" content="Tiny, open-source, ad-free Android launcher with built-in calculator, currency conversion and web/AI search.">
+<meta name="twitter:image" content="https://mkalmousli.github.io/Piko/assets/social-preview.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "Piko",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Android 8.0+",
+      "description": "A minimal, fast, search-first Android launcher with inline calculator, currency conversion, contact actions and multi-engine web and AI search.",
+      "url": "https://mkalmousli.github.io/Piko/",
+      "downloadUrl": "https://github.com/mkalmousli/Piko/releases/latest",
+      "codeRepository": "https://github.com/mkalmousli/Piko",
+      "license": "https://opensource.org/licenses/MIT",
+      "image": "https://mkalmousli.github.io/Piko/assets/social-preview.png",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+      "author": {"@id": "https://al-mo.de/#person"}
+    },
+    {
+      "@type": "Person",
+      "@id": "https://al-mo.de/#person",
+      "name": "Mohamad Almousli",
+      "url": "https://al-mo.de",
+      "sameAs": ["https://github.com/mkalmousli"]
+    }
+  ]
+}
+</script>
+<style>
+:root{--bg:#0E0F12;--surface:#1B1D22;--surface2:#25282F;--accent:#7C9CFF;--text:#F5F6F8;--muted:#9AA0AC;--line:#2A2D34}
+@media (prefers-color-scheme:light){:root{--bg:#F6F7FA;--surface:#fff;--surface2:#ECEEF3;--text:#14161A;--muted:#5B606B;--line:#DDE0E7;--accent:#3F5FD8}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;justify-content:space-between;padding:16px 0}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.2rem;color:var(--text);text-decoration:none}
+.brand img{width:32px;height:32px;border-radius:8px}
+nav a{margin-left:18px;text-decoration:none;color:var(--muted)}nav a:hover{color:var(--text)}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:32px;align-items:center;padding:40px 0 56px}
+h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:1.1;margin:0 0 16px}
+h1 span{color:var(--accent)}
+.lead{color:var(--muted);font-size:1.15rem;max-width:34em}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0 12px}
+.btn{display:inline-block;padding:12px 22px;border-radius:999px;font-weight:600;text-decoration:none;border:1px solid var(--line);color:var(--text);background:var(--surface)}
+.btn.primary{background:var(--accent);color:#0E0F12;border-color:var(--accent)}
+.badges{color:var(--muted);font-size:.9rem}
+.phones{display:flex;gap:14px;justify-content:center}
+.phones img{width:46%;height:auto;border-radius:22px;border:4px solid var(--surface2);background:var(--surface2)}
+.phones img:nth-child(2){margin-top:36px}
+section{padding:40px 0}
+h2{font-size:1.8rem;margin:0 0 8px}
+.sub{color:var(--muted);margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.card h3{margin:0 0 6px;font-size:1.05rem}.card p{margin:0;color:var(--muted);font-size:.95rem}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:20px}
+figure{margin:0}figure img{width:100%;height:auto;border-radius:18px;border:3px solid var(--surface2);background:var(--surface2)}
+figcaption{font-size:.9rem;color:var(--muted);margin-top:8px;text-align:center}
+details{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:10px}
+summary{cursor:pointer;font-weight:600}details p{color:var(--muted);margin:10px 0 0}
+footer{border-top:1px solid var(--line);padding:28px 0 48px;color:var(--muted);text-align:center;font-size:.95rem}
+@media (max-width:760px){.hero{grid-template-columns:1fr;padding-top:16px}nav a:not(.keep){display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#"><img src="assets/icon-512.png" width="32" height="32" alt="Piko icon">Piko</a>
+    <nav><a href="#features">Features</a><a href="#screenshots">Screenshots</a><a href="#faq">FAQ</a><a class="keep" href="https://github.com/mkalmousli/Piko">GitHub</a></nav>
+  </header>
+
+  <main>
+  <div class="hero">
+    <div>
+      <h1>The Android launcher that <span>starts with search</span>.</h1>
+      <p class="lead">Piko is a tiny, open-source launcher. Type to open an app, call a contact, do the maths, convert a currency or ask your favourite search engine or AI. No ads, no tracking, about 80&nbsp;KB.</p>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/mkalmousli/Piko/releases/latest">Download APK</a>
+        <a class="btn" href="https://github.com/mkalmousli/Piko">View on GitHub</a>
+      </div>
+      <div class="badges">Android 8.0+ · MIT license · zero dependencies</div>
+    </div>
+    <div class="phones">
+      <img src="screenshots/05-calculator.png" width="720" height="1512" alt="Piko inline calculator answering 12*8+4 = 100">
+      <img src="screenshots/01-home.png" width="720" height="1512" alt="Piko home screen with an icon grid">
+    </div>
+  </div>
+
+  <section id="features">
+    <h2>Everything within one search bar</h2>
+    <p class="sub">Piko is built around the thing you do most: find something fast.</p>
+    <div class="grid">
+      <div class="card"><h3>Search-first</h3><p>Opens on search. Results learn from your choices and launch history.</p></div>
+      <div class="card"><h3>Calculator &amp; currency</h3><p>Type <code>12*8+4</code> or <code>100 usd to eur</code> and get the answer instantly.</p></div>
+      <div class="card"><h3>Web &amp; AI in one tap</h3><p>Google, Brave, DuckDuckGo, Bing, ChatGPT, Claude, Perplexity, or any custom URL.</p></div>
+      <div class="card"><h3>Smart contacts</h3><p>Search by name or number; call, SMS, WhatsApp message or call per result.</p></div>
+      <div class="card"><h3>Customise apps</h3><p>Rename apps, add search tags, set custom icons, and hide what you don't need.</p></div>
+      <div class="card"><h3>Home grid &amp; widgets</h3><p>Configurable columns, rows and pages with resizable widgets.</p></div>
+      <div class="card"><h3>Tiny &amp; private</h3><p>Pure Android SDK. No analytics, ads or trackers. Contacts permission is optional.</p></div>
+      <div class="card"><h3>Open source</h3><p>MIT licensed, built and signed by GitHub Actions on every release.</p></div>
+    </div>
+  </section>
+
+  <section id="screenshots">
+    <h2>Screenshots</h2>
+    <p class="sub">Captured on a Moto G7 Play.</p>
+    <div class="gallery">
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/01-home.png" alt="Piko home grid"><figcaption>Home grid</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/02-home-icon-menu.png" alt="Long-press menu with app info, rename, uninstall and remove"><figcaption>Long-press menu</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/03-add-menu.png" alt="Menu to add apps and widgets"><figcaption>Add apps &amp; widgets</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/04-app-search.png" alt="App search results with highlighted matches"><figcaption>App search</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/05-calculator.png" alt="Inline calculator"><figcaption>Calculator</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/06-currency.png" alt="Inline currency conversion from USD to EUR"><figcaption>Currency conversion</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/07-web-search.png" alt="Search the web row with Google, Brave, DuckDuckGo, ChatGPT and Claude buttons"><figcaption>Web &amp; AI search</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/08-settings.png" alt="Layout and behaviour settings"><figcaption>Settings</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/10-search-settings.png" alt="Search source toggles"><figcaption>Search sources</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/11-web-search-engines.png" alt="Reorderable list of web search engines and AI chats"><figcaption>Engines &amp; AI chats</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/12-contact-actions.png" alt="Contact action button settings"><figcaption>Contact actions</figcaption></figure>
+      <figure><img loading="lazy" width="720" height="1512" src="screenshots/13-hidden-apps.png" alt="Hidden apps screen"><figcaption>Hidden apps</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2>FAQ</h2>
+    <details><summary>How do I install Piko?</summary><p>Download the APK from the <a href="https://github.com/mkalmousli/Piko/releases/latest">latest release</a>, install it, then press Home and choose Piko as your default launcher.</p></details>
+    <details><summary>Which Android versions are supported?</summary><p>Android 8.0 (API 26) and newer.</p></details>
+    <details><summary>Does Piko collect any data?</summary><p>No. Everything stays on your device. The only network request Piko makes itself is for currency rates. See the <a href="https://github.com/mkalmousli/Piko/blob/main/PRIVACY.md">privacy notes</a>.</p></details>
+    <details><summary>Is the contacts permission required?</summary><p>No. Decline it and apps, calculator, currency and web search still work.</p></details>
+    <details><summary>Can I use ChatGPT, Claude or my own search engine?</summary><p>Yes. Enable the built-in engines or add any site that accepts a query in its URL.</p></details>
+  </section>
+  </main>
+
+  <footer>
+    <p>Piko is open source under the <a href="https://github.com/mkalmousli/Piko/blob/main/LICENSE">MIT license</a>.</p>
+    <p>Made by <a href="https://al-mo.de" rel="author">Mohamad Almousli</a> · <a href="https://al-mo.de">al-mo.de</a> · <a href="https://github.com/mkalmousli">GitHub</a></p>
+  </footer>
+</div>
+</body>
+</html>

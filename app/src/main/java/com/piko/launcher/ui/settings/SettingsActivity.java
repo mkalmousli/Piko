@@ -42,7 +42,6 @@ public final class SettingsActivity extends Activity {
     private TextView textColumns, textRows;
     private LinearLayout shortcutsContainer;
     private TextView textNoShortcuts;
-    private LinearLayout engineListContainer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,8 +81,8 @@ public final class SettingsActivity extends Activity {
         directCallSwitch.setOnCheckedChangeListener((CompoundButton b, boolean checked) ->
                 prefs.setDirectCall(checked));
 
-        engineListContainer = findViewById(R.id.engine_list_container);
-        refreshEngineList();
+        findViewById(R.id.btn_search_settings).setOnClickListener(v ->
+                startActivity(new Intent(this, SearchSettingsActivity.class)));
 
         findViewById(R.id.btn_reset_layout).setOnClickListener(v -> confirmResetLayout());
         findViewById(R.id.btn_add_shortcut).setOnClickListener(v -> startAddShortcut());
@@ -93,48 +92,6 @@ public final class SettingsActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshShortcutsUi();
-    }
-
-    private void refreshEngineList() {
-        engineListContainer.removeAllViews();
-        List<String> order = new ArrayList<>(prefs.searchEngineOrder());
-        List<String> enabled = prefs.enabledSearchEngines();
-
-        for (int i = 0; i < order.size(); i++) {
-            String id = order.get(i);
-            WebSearchEngines.Engine engine = WebSearchEngines.byId(id);
-            View row = LayoutInflater.from(this).inflate(R.layout.item_settings_search_engine, engineListContainer, false);
-            CheckBox checkBox = row.findViewById(R.id.checkbox);
-            TextView label = row.findViewById(R.id.label);
-            TextView up = row.findViewById(R.id.btn_up);
-            TextView down = row.findViewById(R.id.btn_down);
-
-            label.setText(engine.label);
-            checkBox.setChecked(enabled.contains(id));
-            checkBox.setOnCheckedChangeListener((b, checked) -> prefs.setSearchEngineEnabled(id, checked));
-
-            int index = i;
-            up.setEnabled(index > 0);
-            up.setAlpha(index > 0 ? 1f : 0.3f);
-            up.setOnClickListener(v -> {
-                List<String> newOrder = new ArrayList<>(order);
-                String moved = newOrder.remove(index);
-                newOrder.add(index - 1, moved);
-                prefs.setSearchEngineOrder(newOrder);
-                refreshEngineList();
-            });
-            down.setEnabled(index < order.size() - 1);
-            down.setAlpha(index < order.size() - 1 ? 1f : 0.3f);
-            down.setOnClickListener(v -> {
-                List<String> newOrder = new ArrayList<>(order);
-                String moved = newOrder.remove(index);
-                newOrder.add(index + 1, moved);
-                prefs.setSearchEngineOrder(newOrder);
-                refreshEngineList();
-            });
-
-            engineListContainer.addView(row);
-        }
     }
 
     private interface IntConsumer {

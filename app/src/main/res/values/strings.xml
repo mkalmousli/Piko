@@ -34,6 +34,8 @@
     <string name="widget_add_failed">Couldn\'t add that widget</string>
 
     <string name="menu_add_widget">Add widget</string>
+    <string name="menu_more">More</string>
+    <string name="menu_manage_apps">Manage apps</string>
     <string name="menu_add_app">Add app</string>
     <string name="menu_remove">Remove</string>
     <string name="menu_settings">Piko settings</string>
@@ -50,7 +52,7 @@
     <string name="action_remove">Remove</string>
     <string name="action_cancel">Cancel</string>
 
-    <string name="menu_edit_app">Edit app</string>
+    <string name="menu_edit_app">Rename / tags / icon</string>
     <string name="change_icon">Change icon</string>
     <string name="app_name_label">Name</string>
     <string name="app_tags_label">Search tags</string>
@@ -61,4 +63,7 @@
     <string name="settings_search_engines">Web search engines</string>
     <string name="settings_search_engines_hint">Enable and reorder — shown left-to-right on the search-the-web row.</string>
     <string name="uninstall_failed">Couldn\'t open the uninstall screen for this app</string>
+    <string name="settings_search">Search</string>
+    <string name="settings_search_open">Search settings ›</string>
+    <string name="resize_hint">Drag the corner handle to resize, tap outside to finish</string>
 </resources>

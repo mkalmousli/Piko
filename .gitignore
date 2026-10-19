@@ -3,3 +3,9 @@ build/
 local.properties
 *.iml
 .idea/
+.claude/
+*.jks
+*.keystore
+keystore.properties
+.DS_Store
+captures/

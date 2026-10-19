@@ -3,7 +3,13 @@ package com.piko.launcher.core;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -25,6 +31,10 @@ public final class Prefs {
     private static final String KEY_CONTACTS_PERMISSION_ASKED = "contacts_permission_asked";
     /** Comma-separated engine ids in user-chosen order, enabled ones prefixed unmarked, disabled ones with a "-" prefix. */
     private static final String KEY_SEARCH_ENGINE_ORDER = "web_search_engine_order_v2";
+
+    private static final String KEY_CUSTOM_ENGINES = "custom_search_engines";
+    private static final String KEY_HIDDEN_APPS = "hidden_apps";
+    private static final String KEY_CONTACT_TAP = "contact_tap_action";
 
     public static final int DEFAULT_COLUMNS = 5;
     public static final int DEFAULT_ROWS = 6;
@@ -112,8 +122,10 @@ public final class Prefs {
                 if (!id.isEmpty()) ids.add(id);
             }
         }
-        for (WebSearchEngines.Engine e : WebSearchEngines.ALL) ids.add(e.id); // append any new catalog entries
-        return new ArrayList<>(ids);
+        for (WebSearchEngines.Engine e : allEngines()) ids.add(e.id); // append any new catalog entries
+        List<String> result = new ArrayList<>();
+        for (String id : ids) if (engineExists(id)) result.add(id);
+        return result;
     }
 
     /** Subset of {@link #searchEngineOrder()} that the user left enabled, still in order. */
@@ -125,12 +137,13 @@ public final class Prefs {
             if (!order.isEmpty()) result.add(order.get(0)); // fresh install: only the first engine enabled
             return result;
         }
-        LinkedHashSet<String> disabled = new LinkedHashSet<>();
+        // Ids never saved before (newly added catalog entries) start disabled.
+        LinkedHashSet<String> enabledSaved = new LinkedHashSet<>();
         for (String token : raw.split(",")) {
-            if (token.startsWith("-")) disabled.add(token.substring(1));
+            if (!token.isEmpty() && !token.startsWith("-")) enabledSaved.add(token);
         }
         List<String> result = new ArrayList<>();
-        for (String id : order) if (!disabled.contains(id)) result.add(id);
+        for (String id : order) if (enabledSaved.contains(id)) result.add(id);
         return result;
     }
 
@@ -158,6 +171,111 @@ public final class Prefs {
             sb.append(id);
         }
         sp.edit().putString(KEY_SEARCH_ENGINE_ORDER, sb.toString()).apply();
+    }
+
+
+    // ------------------------------------------------------- engine catalog
+
+    public List<WebSearchEngines.Engine> customEngines() {
+        List<WebSearchEngines.Engine> list = new ArrayList<>();
+        try {
+            JSONArray arr = new JSONArray(sp.getString(KEY_CUSTOM_ENGINES, "[]"));
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.getJSONObject(i);
+                list.add(new WebSearchEngines.Engine(o.getString("id"), o.getString("label"), o.getString("url")));
+            }
+        } catch (JSONException ignored) {
+        }
+        return list;
+    }
+
+    public List<WebSearchEngines.Engine> allEngines() {
+        List<WebSearchEngines.Engine> list = new ArrayList<>(WebSearchEngines.ALL);
+        list.addAll(customEngines());
+        return list;
+    }
+
+    private boolean engineExists(String id) {
+        for (WebSearchEngines.Engine e : allEngines()) if (e.id.equals(id)) return true;
+        return false;
+    }
+
+    public WebSearchEngines.Engine engineById(String id) {
+        for (WebSearchEngines.Engine e : allEngines()) if (e.id.equals(id)) return e;
+        return WebSearchEngines.ALL.get(0);
+    }
+
+    public boolean isCustomEngine(String id) {
+        return WebSearchEngines.builtIn(id) == null;
+    }
+
+    public void addCustomEngine(String label, String url) {
+        List<WebSearchEngines.Engine> list = customEngines();
+        String id = "custom_" + System.currentTimeMillis();
+        list.add(new WebSearchEngines.Engine(id, label, url));
+        saveCustomEngines(list);
+        setSearchEngineEnabled(id, true);
+    }
+
+    public void removeCustomEngine(String id) {
+        List<WebSearchEngines.Engine> list = customEngines();
+        for (int i = list.size() - 1; i >= 0; i--) if (list.get(i).id.equals(id)) list.remove(i);
+        saveCustomEngines(list);
+    }
+
+    private void saveCustomEngines(List<WebSearchEngines.Engine> list) {
+        JSONArray arr = new JSONArray();
+        try {
+            for (WebSearchEngines.Engine e : list) {
+                arr.put(new JSONObject().put("id", e.id).put("label", e.label).put("url", e.urlPrefix));
+            }
+        } catch (JSONException ignored) {
+        }
+        sp.edit().putString(KEY_CUSTOM_ENGINES, arr.toString()).apply();
+    }
+
+    // ------------------------------------------------------ search behaviour
+
+    public static final String FLAG_SEARCH_APPS = "search_apps";
+    public static final String FLAG_SEARCH_CONTACTS = "search_contacts";
+    public static final String FLAG_SEARCH_CALC = "search_calc";
+    public static final String FLAG_SEARCH_CURRENCY = "search_currency";
+    public static final String FLAG_SEARCH_WEB = "search_web";
+    public static final String FLAG_ACTION_CALL = "contact_action_call";
+    public static final String FLAG_ACTION_SMS = "contact_action_sms";
+    public static final String FLAG_ACTION_WA_MESSAGE = "contact_action_wa_message";
+    public static final String FLAG_ACTION_WA_CALL = "contact_action_wa_call";
+
+    public static final String TAP_OPEN = "open";
+    public static final String TAP_CALL = "call";
+    public static final String TAP_COPY = "copy";
+    public static final String TAP_NONE = "none";
+
+    /** Boolean toggles for search sources and contact action buttons; every one defaults to on. */
+    public boolean flag(String key) {
+        return sp.getBoolean(key, true);
+    }
+
+    public void setFlag(String key, boolean value) {
+        sp.edit().putBoolean(key, value).apply();
+    }
+
+    public String contactTapAction() {
+        return sp.getString(KEY_CONTACT_TAP, TAP_OPEN);
+    }
+
+    public void setContactTapAction(String value) {
+        sp.edit().putString(KEY_CONTACT_TAP, value).apply();
+    }
+
+    public Set<String> hiddenApps() {
+        return new HashSet<>(sp.getStringSet(KEY_HIDDEN_APPS, new HashSet<>()));
+    }
+
+    public void setAppHidden(String appKey, boolean hidden) {
+        Set<String> set = hiddenApps();
+        if (hidden) set.add(appKey); else set.remove(appKey);
+        sp.edit().putStringSet(KEY_HIDDEN_APPS, set).apply();
     }
 
     public boolean isFirstRunDone() {

@@ -155,23 +155,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="28dp"
-            android:text="@string/settings_search_engines"
+            android:text="@string/settings_search"
             android:textColor="@color/piko_accent" />
 
         <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/settings_search_engines_hint"
-            android:textColor="@color/piko_text_secondary"
-            android:textSize="12sp" />
-
-        <LinearLayout
-            android:id="@+id/engine_list_container"
+            android:id="@+id/btn_search_settings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_pressable"
+            android:padding="12dp"
+            android:text="@string/settings_search_open"
+            android:textColor="@color/piko_text_primary"
+            android:textSize="15sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
