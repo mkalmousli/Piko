@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/collage.png" alt="Piko launcher screenshots on a Moto G7 Play: home grid, app search, calculator, currency conversion, web search and settings">
+  <img src="docs/assets/collage.png" alt="Piko launcher screenshots on a Moto G7 Play: home with gradient background, contact actions, calculator, web search, background settings and page overview">
 </p>
 
 Piko opens on a search bar. Type a few letters and launch an app, call a contact, do the maths,
@@ -95,21 +95,29 @@ reach a clean, configurable icon grid. That's it.
 
 All captured on a **Moto G7 Play** (720×1512).
 
-| Home | Long-press menu | Overview |
+| Home | Drag bar | Overview |
 |---|---|---|
-| <img src="docs/screenshots/01-home.png" width="220" alt="Piko home grid"> | <img src="docs/screenshots/02-home-icon-menu.png" width="220" alt="Home icon context menu"> | <img src="docs/screenshots/03-add-menu.png" width="220" alt="Page overview"> |
+| <img src="docs/screenshots/01-home.png" width="220" alt="Piko home grid with a gradient background"> | <img src="docs/screenshots/02-home-icon-menu.png" width="220" alt="Drag an icon to the top for remove, uninstall, info, edit and rename"> | <img src="docs/screenshots/03-overview.png" width="220" alt="Page overview with page strip"> |
 
-| App search | Calculator | Currency |
+| App search | Contact actions | Website |
 |---|---|---|
-| <img src="docs/screenshots/04-app-search.png" width="220" alt="App search results"> | <img src="docs/screenshots/05-calculator.png" width="220" alt="Inline calculator"> | <img src="docs/screenshots/06-currency.png" width="220" alt="Inline currency conversion"> |
+| <img src="docs/screenshots/04-app-search.png" width="220" alt="App search results"> | <img src="docs/screenshots/09-contacts.png" width="220" alt="Contact result expanded into call, SMS and WhatsApp chips"> | <img src="docs/screenshots/15-website.png" width="220" alt="Typed address as an Open website result"> |
 
-| Web &amp; AI search | Settings | Search sources |
+| Calculator | Currency | Web &amp; AI search |
 |---|---|---|
-| <img src="docs/screenshots/07-web-search.png" width="220" alt="Search-the-web row with multiple engines"> | <img src="docs/screenshots/08-settings.png" width="220" alt="Layout and behaviour settings"> | <img src="docs/screenshots/10-search-settings.png" width="220" alt="Search source toggles"> |
+| <img src="docs/screenshots/05-calculator.png" width="220" alt="Inline calculator"> | <img src="docs/screenshots/06-currency.png" width="220" alt="Inline currency conversion"> | <img src="docs/screenshots/07-web-search.png" width="220" alt="Search-the-web row with multiple engines"> |
 
-| Engines &amp; AI chats | Contact actions | Hidden apps |
+| Edit shortcut | Edit app | Background |
 |---|---|---|
-| <img src="docs/screenshots/11-web-search-engines.png" width="220" alt="Reorderable web search engines and AI chats"> | <img src="docs/screenshots/12-contact-actions.png" width="220" alt="Contact result buttons and tap action"> | <img src="docs/screenshots/13-hidden-apps.png" width="220" alt="Hidden apps list"> |
+| <img src="docs/screenshots/16-edit-shortcut.png" width="220" alt="Edit shortcut dialog"> | <img src="docs/screenshots/17-app-edit.png" width="220" alt="Rename, tags and icon for an app"> | <img src="docs/screenshots/14-background.png" width="220" alt="Background settings with gradient"> |
+
+| Settings | Search sources | Engines &amp; AI chats |
+|---|---|---|
+| <img src="docs/screenshots/08-settings.png" width="220" alt="Layout and behaviour settings"> | <img src="docs/screenshots/10-search-settings.png" width="220" alt="Search source toggles"> | <img src="docs/screenshots/11-web-search-engines.png" width="220" alt="Reorderable web search engines and AI chats"> |
+
+| Contact buttons | Hidden apps |
+|---|---|
+| <img src="docs/screenshots/12-contact-actions.png" width="220" alt="Contact result buttons and tap action"> | <img src="docs/screenshots/13-hidden-apps.png" width="220" alt="Hidden apps list"> |
 
 ## Install
 

@@ -57,7 +57,11 @@ public final class Background {
         if (bg == null) return;
         boolean wallpaper = prefs.bgMode() == Prefs.BG_WALLPAPER;
         if (wallpaper) activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
-        activity.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        root.setBackground(bg);
+        // The window background fills the whole screen, so the system bars (made transparent) show it too.
+        activity.getWindow().setBackgroundDrawable(bg);
+        activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
+        activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (android.os.Build.VERSION.SDK_INT >= 29) activity.getWindow().setNavigationBarContrastEnforced(false);
+        root.setBackground(null);
     }
 }
