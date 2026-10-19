@@ -5,13 +5,16 @@
     android:orientation="horizontal"
     android:gravity="center_vertical"
     android:paddingStart="12dp"
-    android:paddingEnd="8dp">
+    android:paddingLeft="12dp"
+    android:paddingEnd="8dp"
+    android:paddingRight="8dp">
 
     <ImageView
         android:layout_width="20dp"
         android:layout_height="20dp"
         android:src="@drawable/ic_search"
-        android:layout_marginEnd="10dp" />
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp" />
 
     <TextView
         android:id="@+id/label"

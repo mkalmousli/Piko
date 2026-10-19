@@ -79,18 +79,18 @@ public final class AppCustomizationStore {
             if (iconPath != null) o.put("iconPath", iconPath);
         } catch (JSONException ignored) {
         }
-        sp.edit().putString(key, o.toString()).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(key, o.toString()));
     }
 
     public void clear(String key) {
-        sp.edit().remove(key).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().remove(key));
     }
 
     /** Applies any stored override to a freshly-indexed app, leaving unmodified apps untouched. */
     public AppInfo applyTo(AppInfo raw) {
         Entry e = get(raw.key());
         if (e == null) return raw;
-        String label = e.label != null && !e.label.trim().isEmpty() ? e.label : raw.label;
+        String label = e.label != null && !com.piko.launcher.util.Compat.isEmpty(e.label.trim()) ? e.label : raw.label;
         return new AppInfo(raw.packageName, raw.activityName, label, e.tags, e.iconPath);
     }
 

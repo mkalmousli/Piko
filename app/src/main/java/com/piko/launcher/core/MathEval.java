@@ -18,7 +18,7 @@ public final class MathEval {
     public static boolean looksLikeExpression(String query) {
         if (query == null) return false;
         String q = query.trim();
-        if (q.isEmpty() || !q.matches("[0-9a-zA-Z+\\-*/^().,%!×÷√\\s]+")) return false;
+        if (com.piko.launcher.util.Compat.isEmpty(q) || !q.matches("[0-9a-zA-Z+\\-*/^().,%!×÷√\\s]+")) return false;
         // A bare number counts too, so typing digits always shows the calculator row.
         return q.matches(".*[0-9].*") || q.matches("(?i).*\\b(pi|e)\\b.*[-+*/^].*");
     }
@@ -49,7 +49,7 @@ public final class MathEval {
         private int pos;
 
         Parser(String s) {
-            this.s = s.replace('×', '*').replace('÷', '/').replace("√", "sqrt").toLowerCase(java.util.Locale.ROOT);
+            this.s = s.replace('×', '*').replace('÷', '/').replace("√", "sqrt").toLowerCase(java.util.Locale.ENGLISH);
         }
 
         boolean atEnd() {

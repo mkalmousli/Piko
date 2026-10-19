@@ -17,7 +17,7 @@ public final class TextHighlighter {
 
     public static CharSequence highlight(android.content.Context context, String label, String rawQuery) {
         if (label == null) label = "";
-        if (rawQuery == null || rawQuery.trim().isEmpty()) return label;
+        if (rawQuery == null || com.piko.launcher.util.Compat.isEmpty(rawQuery.trim())) return label;
 
         SpannableString spannable = new SpannableString(label);
         String labelLower = label.toLowerCase();
@@ -25,7 +25,7 @@ public final class TextHighlighter {
 
         boolean any = false;
         for (String word : rawQuery.trim().toLowerCase().split("\\s+")) {
-            if (word.isEmpty()) continue;
+            if (com.piko.launcher.util.Compat.isEmpty(word)) continue;
             int from = 0;
             while (true) {
                 int idx = labelLower.indexOf(word, from);

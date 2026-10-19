@@ -58,7 +58,7 @@ public final class Prefs {
     }
 
     public void setColumns(int value) {
-        sp.edit().putInt(KEY_COLUMNS, value).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt(KEY_COLUMNS, value));
     }
 
     public int rows() {
@@ -66,7 +66,7 @@ public final class Prefs {
     }
 
     public void setRows(int value) {
-        sp.edit().putInt(KEY_ROWS, value).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt(KEY_ROWS, value));
     }
 
     public static final int BG_DEFAULT = 0, BG_COLOR = 1, BG_GRADIENT = 2, BG_WALLPAPER = 3, BG_IMAGE = 4;
@@ -81,8 +81,8 @@ public final class Prefs {
     public int bgDim() { return sp.getInt("bg_dim", 0); }
 
     public void setBackground(int mode, int c1, int c2, int angle, String image, int dim) {
-        sp.edit().putInt("bg_mode", mode).putInt("bg_color1", c1).putInt("bg_color2", c2)
-                .putInt("bg_angle", angle).putString("bg_image", image).putInt("bg_dim", dim).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt("bg_mode", mode).putInt("bg_color1", c1).putInt("bg_color2", c2)
+                .putInt("bg_angle", angle).putString("bg_image", image).putInt("bg_dim", dim));
     }
 
     public int defaultPage() {
@@ -90,7 +90,7 @@ public final class Prefs {
     }
 
     public void setDefaultPage(int page) {
-        sp.edit().putInt(KEY_DEFAULT_PAGE, page).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt(KEY_DEFAULT_PAGE, page));
     }
 
     public boolean directCall() {
@@ -98,7 +98,7 @@ public final class Prefs {
     }
 
     public void setDirectCall(boolean value) {
-        sp.edit().putBoolean(KEY_DIRECT_CALL, value).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean(KEY_DIRECT_CALL, value));
     }
 
     public int gridPageCount() {
@@ -106,7 +106,7 @@ public final class Prefs {
     }
 
     public void setGridPageCount(int count) {
-        sp.edit().putInt(KEY_GRID_PAGES, count).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt(KEY_GRID_PAGES, count));
     }
 
     /** Bumped whenever a change forces MainActivity to rebuild its grid pages (columns, rows, page count, layout reset). */
@@ -120,11 +120,11 @@ public final class Prefs {
     }
 
     public void setIconPack(String pkg) {
-        sp.edit().putString(KEY_ICON_PACK, pkg == null ? "" : pkg).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_ICON_PACK, pkg == null ? "" : pkg));
     }
 
     public void bumpLayoutRevision() {
-        sp.edit().putInt(KEY_LAYOUT_REVISION, layoutRevision() + 1).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt(KEY_LAYOUT_REVISION, layoutRevision() + 1));
     }
 
     /** So the one-time "search my contacts" permission prompt never nags after the user answers it. */
@@ -133,17 +133,17 @@ public final class Prefs {
     }
 
     public void setContactsPermissionAsked(boolean value) {
-        sp.edit().putBoolean(KEY_CONTACTS_PERMISSION_ASKED, value).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean(KEY_CONTACTS_PERMISSION_ASKED, value));
     }
 
     /** Every catalog engine id, in the user's chosen order (defaults to catalog order if never touched). */
     public List<String> searchEngineOrder() {
         String raw = sp.getString(KEY_SEARCH_ENGINE_ORDER, null);
         LinkedHashSet<String> ids = new LinkedHashSet<>();
-        if (raw != null && !raw.isEmpty()) {
+        if (raw != null && !com.piko.launcher.util.Compat.isEmpty(raw)) {
             for (String token : raw.split(",")) {
                 String id = token.startsWith("-") ? token.substring(1) : token;
-                if (!id.isEmpty()) ids.add(id);
+                if (!com.piko.launcher.util.Compat.isEmpty(id)) ids.add(id);
             }
         }
         for (WebSearchEngines.Engine e : allEngines()) ids.add(e.id); // append any new catalog entries
@@ -156,15 +156,15 @@ public final class Prefs {
     public List<String> enabledSearchEngines() {
         String raw = sp.getString(KEY_SEARCH_ENGINE_ORDER, null);
         List<String> order = searchEngineOrder();
-        if (raw == null || raw.isEmpty()) {
+        if (raw == null || com.piko.launcher.util.Compat.isEmpty(raw)) {
             List<String> result = new ArrayList<>();
-            if (!order.isEmpty()) result.add(order.get(0)); // fresh install: only the first engine enabled
+            if (!com.piko.launcher.util.Compat.isEmpty(order)) result.add(order.get(0)); // fresh install: only the first engine enabled
             return result;
         }
         // Ids never saved before (newly added catalog entries) start disabled.
         LinkedHashSet<String> enabledSaved = new LinkedHashSet<>();
         for (String token : raw.split(",")) {
-            if (!token.isEmpty() && !token.startsWith("-")) enabledSaved.add(token);
+            if (!com.piko.launcher.util.Compat.isEmpty(token) && !token.startsWith("-")) enabledSaved.add(token);
         }
         List<String> result = new ArrayList<>();
         for (String id : order) if (enabledSaved.contains(id)) result.add(id);
@@ -194,7 +194,7 @@ public final class Prefs {
             if (!enabledSet.contains(id)) sb.append("-");
             sb.append(id);
         }
-        sp.edit().putString(KEY_SEARCH_ENGINE_ORDER, sb.toString()).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_SEARCH_ENGINE_ORDER, sb.toString()));
     }
 
 
@@ -255,7 +255,7 @@ public final class Prefs {
             }
         } catch (JSONException ignored) {
         }
-        sp.edit().putString(KEY_CUSTOM_ENGINES, arr.toString()).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_CUSTOM_ENGINES, arr.toString()));
     }
 
     // ------------------------------------------------------ search behaviour
@@ -304,13 +304,13 @@ public final class Prefs {
     }
 
     public void clearCalcHistory() {
-        sp.edit().remove(KEY_CALC_HISTORY).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().remove(KEY_CALC_HISTORY));
     }
 
     private void saveCalcHistory(java.util.List<String[]> list) {
         JSONArray arr = new JSONArray();
         for (String[] e : list) arr.put(new JSONArray().put(e[0]).put(e[1]));
-        sp.edit().putString(KEY_CALC_HISTORY, arr.toString()).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_CALC_HISTORY, arr.toString()));
     }
 
     public boolean flag(String key) {
@@ -318,7 +318,7 @@ public final class Prefs {
     }
 
     public void setFlag(String key, boolean value) {
-        sp.edit().putBoolean(key, value).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean(key, value));
     }
 
     public String contactTapAction() {
@@ -326,17 +326,28 @@ public final class Prefs {
     }
 
     public void setContactTapAction(String value) {
-        sp.edit().putString(KEY_CONTACT_TAP, value).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_CONTACT_TAP, value));
     }
 
     public Set<String> hiddenApps() {
-        return new HashSet<>(sp.getStringSet(KEY_HIDDEN_APPS, new HashSet<>()));
+        Set<String> out = new HashSet<>();
+        if (android.os.Build.VERSION.SDK_INT >= 11) {
+            out.addAll(sp.getStringSet(KEY_HIDDEN_APPS, new HashSet<>()));
+        } else {
+            String joined = sp.getString(KEY_HIDDEN_APPS, "");
+            if (joined.length() > 0) out.addAll(java.util.Arrays.asList(joined.split("\n")));
+        }
+        return out;
     }
 
     public void setAppHidden(String appKey, boolean hidden) {
         Set<String> set = hiddenApps();
         if (hidden) set.add(appKey); else set.remove(appKey);
-        sp.edit().putStringSet(KEY_HIDDEN_APPS, set).apply();
+        if (android.os.Build.VERSION.SDK_INT >= 11) {
+            com.piko.launcher.util.Compat.apply(sp.edit().putStringSet(KEY_HIDDEN_APPS, set));
+        } else {
+            com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_HIDDEN_APPS, android.text.TextUtils.join("\n", set)));
+        }
     }
 
     /** Free-form placement (default on): icons sit exactly where dropped instead of snapping to cells. */
@@ -345,7 +356,7 @@ public final class Prefs {
     }
 
     public void setFreeform(boolean v) {
-        sp.edit().putBoolean("freeform", v).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean("freeform", v));
     }
 
     public boolean hideAllLabels() {
@@ -353,7 +364,7 @@ public final class Prefs {
     }
 
     public void setHideAllLabels(boolean v) {
-        sp.edit().putBoolean("hide_all_labels", v).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean("hide_all_labels", v));
     }
 
     /** Show the keyboard automatically when the search page is in front (default on). */
@@ -362,7 +373,7 @@ public final class Prefs {
     }
 
     public void setAutoFocusKeyboard(boolean v) {
-        sp.edit().putBoolean("autofocus_keyboard", v).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean("autofocus_keyboard", v));
     }
 
     public boolean isFirstRunDone() {
@@ -370,6 +381,6 @@ public final class Prefs {
     }
 
     public void markFirstRunDone() {
-        sp.edit().putBoolean(KEY_FIRST_RUN, true).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putBoolean(KEY_FIRST_RUN, true));
     }
 }

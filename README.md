@@ -125,7 +125,7 @@ All captured on a **Moto G7 Play** (720×1512).
 2. Open it and allow installs from your browser/file manager if asked.
 3. Press Home and choose **Piko → Always**.
 
-Requires Android 5.0 (API 21) or newer. Features that need a newer Android (pinned shortcuts from other apps, app widget lists, shortcut icons) are simply disabled on older versions. Releases include a SHA-256 checksum.
+Runs on Android 1.0 (API 1) and newer. Features that need a newer Android (widgets need 4.1, shortcuts pinned by other apps 8.0, shortcut icons 7.1) are simply disabled on older versions. Regularly tested on Android 10; older versions are covered by API-level lint, not real devices. Releases include a SHA-256 checksum.
 
 ## Permissions
 

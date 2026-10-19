@@ -107,13 +107,13 @@ public final class HomeGridLayout extends ViewGroup {
         super(context);
         this.columns = columns;
         this.rows = rows;
-        setChildrenDrawingOrderEnabled(true);
+        if (android.os.Build.VERSION.SDK_INT >= 7) setChildrenDrawingOrderEnabled(true);
         float density = context.getResources().getDisplayMetrics().density;
         framePaint.setStyle(Paint.Style.STROKE);
         framePaint.setStrokeWidth(2 * density);
         framePaint.setColor(0xFF7C9CFF);
         fillPaint.setColor(0x337C9CFF);
-        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        touchSlop = com.piko.launcher.util.Compat.touchSlop(context);
         // Same threshold the pager uses to steal a swipe, so exactly one of the two gestures wins.
         moveCancelThreshold = touchSlop;
         textPaint.setColor(0xFFFFFFFF);
@@ -300,7 +300,7 @@ public final class HomeGridLayout extends ViewGroup {
                 canvas.drawRoundRect(tmpRect, 12 * density, 12 * density, fillPaint);
             }
             textPaint.setAlpha(removeArmed ? 255 : 120);
-            android.graphics.drawable.Drawable ic = getContext().getDrawable(actionIcon(actions[i])).mutate();
+            android.graphics.drawable.Drawable ic = com.piko.launcher.util.Compat.drawable(getResources(), actionIcon(actions[i]));
             int cx = (int) (i * tileW + tileW / 2f), cy = (int) (h / 2f - 4 * density), r = (int) (10 * density);
             ic.setBounds(cx - r, cy - r, cx + r, cy + r);
             ic.setAlpha(removeArmed ? 255 : 120);
@@ -347,7 +347,7 @@ public final class HomeGridLayout extends ViewGroup {
     private boolean handleResizeTouch(MotionEvent ev) {
         GridLayoutParams lp = (GridLayoutParams) resizeView.getLayoutParams();
         int w = getMeasuredWidth(), h = getMeasuredHeight();
-        switch (ev.getActionMasked()) {
+        switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
             case MotionEvent.ACTION_DOWN: {
                 RectF r = resizeRect();
                 int m = edgesAt(r, ev.getX(), ev.getY());
@@ -434,7 +434,7 @@ public final class HomeGridLayout extends ViewGroup {
                 edgeArmed = false;
                 return;
             }
-            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            com.piko.launcher.util.Compat.haptic(this, android.view.HapticFeedbackConstants.CLOCK_TICK);
             draggingView = null;
             dropTarget = null;
             inRemoveZone = false;
@@ -492,7 +492,7 @@ public final class HomeGridLayout extends ViewGroup {
         View parent = (View) getParent();
         parent.getLocationOnScreen(loc);
         float scale = 1f;
-        for (View v = this; v.getParent() instanceof View; v = (View) v.getParent()) scale *= v.getScaleX();
+        for (View v = this; v.getParent() instanceof View; v = (View) v.getParent()) scale *= com.piko.launcher.util.Compat.getScaleX(v);
         out[0] = (rawX - loc[0]) / scale - (getLeft() - parent.getScrollX());
         out[1] = (rawY - loc[1]) / scale - (getTop() - parent.getScrollY());
     }
@@ -501,7 +501,7 @@ public final class HomeGridLayout extends ViewGroup {
 
     private void fireLongPress(float x, float y) {
         View child = childAt(x, y);
-        performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        com.piko.launcher.util.Compat.haptic(this, android.view.HapticFeedbackConstants.LONG_PRESS);
         if (child == null) {
             if (callbacks != null && cellW > 0 && cellH > 0) {
                 int col = Math.min(columns - 1, (int) (x / cellW));
@@ -531,14 +531,14 @@ public final class HomeGridLayout extends ViewGroup {
 
     /** Picks the dragged view up: scaled, slightly see-through and tilted toward the viewer. */
     private void lift(View v) {
-        v.animate().cancel();
-        v.setCameraDistance(9000 * getResources().getDisplayMetrics().density);
-        v.animate().scaleX(1.15f).scaleY(1.15f).alpha(0.92f).rotationX(-6f).setDuration(120).start();
+        com.piko.launcher.util.Compat.animate(v).cancel();
+        com.piko.launcher.util.Compat.setCameraDistance(v, 9000 * getResources().getDisplayMetrics().density);
+        com.piko.launcher.util.Compat.animate(v).scaleX(1.15f).scaleY(1.15f).alpha(0.92f).rotationX(-6f).setDuration(120).start();
     }
 
     private void drop(View v) {
-        v.animate().cancel();
-        v.animate().scaleX(1f).scaleY(1f).alpha(1f).rotationX(0f).translationX(0f).translationY(0f)
+        com.piko.launcher.util.Compat.animate(v).cancel();
+        com.piko.launcher.util.Compat.animate(v).scaleX(1f).scaleY(1f).alpha(1f).rotationX(0f).translationX(0f).translationY(0f)
                 .setDuration(180).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
     }
 
@@ -577,10 +577,10 @@ public final class HomeGridLayout extends ViewGroup {
                 }
                 toLocal(lastRawX, lastRawY, tmpLocal);
                 positionDragged(tmpLocal[0], tmpLocal[1]);
-                postOnAnimation(this);
+                com.piko.launcher.util.Compat.post(HomeGridLayout.this, this);
             }
         };
-        postOnAnimation(tick);
+        com.piko.launcher.util.Compat.post(this, tick);
     }
 
     private void positionDragged(float x, float y) {
@@ -602,12 +602,12 @@ public final class HomeGridLayout extends ViewGroup {
         int act = remove ? actions[Math.max(0, Math.min(actions.length - 1, (int) (x / (getWidth() / (float) actions.length))))] : 0;
         Drop d = remove || freeform ? null : resolveDrop(v);
         boolean changed = remove != inRemoveZone || act != activeAction || !sameDrop(d, dropTarget);
-        if (act != activeAction) performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+        if (act != activeAction) com.piko.launcher.util.Compat.haptic(this, android.view.HapticFeedbackConstants.CLOCK_TICK);
         activeAction = act;
         inRemoveZone = remove;
         dropTarget = d;
         if (changed) {
-            if (d != null && d.valid) performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            if (d != null && d.valid) com.piko.launcher.util.Compat.haptic(this, android.view.HapticFeedbackConstants.CLOCK_TICK);
             invalidate();
         }
         updateEdgeDwell(x);
@@ -675,8 +675,8 @@ public final class HomeGridLayout extends ViewGroup {
         GridLayoutParams lp = (GridLayoutParams) v.getLayoutParams();
         int left = leftOf(lp), top = topOf(lp);
         v.layout(left, top, left + widthOf(lp), top + heightOf(lp));
-        v.setTranslationX(fromLeft - left);
-        v.setTranslationY(fromTop - top);
+        com.piko.launcher.util.Compat.setTranslationX(v, fromLeft - left);
+        com.piko.launcher.util.Compat.setTranslationY(v, fromTop - top);
         drop(v);
     }
 
@@ -727,7 +727,7 @@ public final class HomeGridLayout extends ViewGroup {
             lp.row = Math.max(0, Math.min(rows - lp.rowSpan, Math.round(top / (float) cellH)));
             if (callbacks != null) callbacks.onItemMoved(v, lp.col, lp.row);
             settleInto(v, fromLeft, fromTop);
-            performHapticFeedback(android.os.Build.VERSION.SDK_INT >= 23 ? android.view.HapticFeedbackConstants.CONTEXT_CLICK : android.view.HapticFeedbackConstants.LONG_PRESS);
+            com.piko.launcher.util.Compat.haptic(this, android.os.Build.VERSION.SDK_INT >= 23 ? android.view.HapticFeedbackConstants.CONTEXT_CLICK : android.view.HapticFeedbackConstants.LONG_PRESS);
             return;
         }
         if (d != null && d.valid) {
@@ -750,13 +750,13 @@ public final class HomeGridLayout extends ViewGroup {
             }
         }
         settleInto(v, fromLeft, fromTop);
-        performHapticFeedback(android.os.Build.VERSION.SDK_INT >= 23 ? android.view.HapticFeedbackConstants.CONTEXT_CLICK : android.view.HapticFeedbackConstants.LONG_PRESS);
+        com.piko.launcher.util.Compat.haptic(this, android.os.Build.VERSION.SDK_INT >= 23 ? android.view.HapticFeedbackConstants.CONTEXT_CLICK : android.view.HapticFeedbackConstants.LONG_PRESS);
     }
 
     private void dragEvent(MotionEvent ev) {
         lastRawX = ev.getRawX();
         lastRawY = ev.getRawY();
-        switch (ev.getActionMasked()) {
+        switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
             case MotionEvent.ACTION_MOVE:
                 toLocal(lastRawX, lastRawY, tmpLocal);
                 positionDragged(tmpLocal[0], tmpLocal[1]);
@@ -773,7 +773,7 @@ public final class HomeGridLayout extends ViewGroup {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         if (resizeView != null) return true;
-        switch (ev.getActionMasked()) {
+        switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
             case MotionEvent.ACTION_DOWN:
                 scheduleLongPress(ev.getX(), ev.getY());
                 break;
@@ -803,7 +803,7 @@ public final class HomeGridLayout extends ViewGroup {
         if (resizeView != null) return handleResizeTouch(ev);
         if (proxy != null) {
             proxy.dragEvent(ev);
-            int a = ev.getActionMasked();
+            int a = com.piko.launcher.util.Compat.actionMasked(ev);
             if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) proxy = null;
             return true;
         }
@@ -811,13 +811,13 @@ public final class HomeGridLayout extends ViewGroup {
             dragEvent(ev);
             return true;
         }
-        switch (ev.getActionMasked()) {
+        switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
             case MotionEvent.ACTION_MOVE:
                 trackLongPressDrift(ev);
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL: {
-                boolean tap = ev.getActionMasked() == MotionEvent.ACTION_UP && !longPressFired
+                boolean tap = com.piko.launcher.util.Compat.actionMasked(ev) == MotionEvent.ACTION_UP && !longPressFired
                         && Math.hypot(ev.getX() - downX, ev.getY() - downY) <= moveCancelThreshold
                         && childAt(ev.getX(), ev.getY()) == null;
                 cancelPendingLongPress();

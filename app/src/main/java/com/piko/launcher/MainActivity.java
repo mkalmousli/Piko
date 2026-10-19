@@ -25,7 +25,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.PopupMenu;
+import com.piko.launcher.util.Popup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,6 +62,7 @@ import java.util.List;
  * all swipeable through {@link HorizontalPager}.
  */
 public final class MainActivity extends Activity implements AppIndexer.Listener, ContactIndexer.Listener {
+    private static final java.util.regex.Pattern EMAIL = java.util.regex.Pattern.compile("[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}");
 
     private static final int REQ_PICK_WIDGET_PROVIDER = 771;
     private static final int REQ_PICK_SHORTCUT_ICON = 772;
@@ -225,7 +226,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             }
         });
 
-        searchInput.setOnEditorActionListener((v, actionId, event) -> {
+        if (android.os.Build.VERSION.SDK_INT >= 3) searchInput.setOnEditorActionListener((v, actionId, event) -> {
             boolean isEnter = event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
                     && event.getAction() == KeyEvent.ACTION_DOWN;
             if (actionId == EditorInfo.IME_ACTION_SEARCH || isEnter) {
@@ -252,13 +253,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         // veto the long-press if the finger moved so scrolling the list never opens a menu.
         final float[] listDown = new float[2];
         final boolean[] listMoved = new boolean[1];
-        final int listSlop = Math.max(4, android.view.ViewConfiguration.get(this).getScaledTouchSlop() / 2);
+        final int listSlop = Math.max(4, com.piko.launcher.util.Compat.touchSlop(this) / 2);
         resultsList.setOnTouchListener((v, ev) -> {
-            if (ev.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+            if (com.piko.launcher.util.Compat.actionMasked(ev) == android.view.MotionEvent.ACTION_DOWN) {
                 listDown[0] = ev.getX();
                 listDown[1] = ev.getY();
                 listMoved[0] = false;
-            } else if (ev.getActionMasked() == android.view.MotionEvent.ACTION_MOVE
+            } else if (com.piko.launcher.util.Compat.actionMasked(ev) == android.view.MotionEvent.ACTION_MOVE
                     && (Math.abs(ev.getX() - listDown[0]) > listSlop || Math.abs(ev.getY() - listDown[1]) > listSlop)) {
                 listMoved[0] = true;
             }
@@ -276,7 +277,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 return true;
             }
             if (result.type == SearchResult.TYPE_ACTION && result.shortcutKind != null) {
-                PopupMenu menu = new PopupMenu(this, v);
+                Popup menu = new Popup(this, v);
                 menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
                 menu.setOnMenuItemClickListener(m -> {
                     HomeItem item = new HomeItem();
@@ -302,7 +303,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             else if (code == android.view.KeyEvent.KEYCODE_DPAD_DOWN) sel = Math.min(n - 1, sel + 1);
             else return false;
             searchAdapter.setSelected(sel);
-            resultsList.smoothScrollToPosition(sel);
+            if (android.os.Build.VERSION.SDK_INT >= 8) resultsList.smoothScrollToPosition(sel);
+            else resultsList.setSelection(sel);
             return true;
         });
 
@@ -313,7 +315,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     /** Enter/search-action activates the top-ranked match — the one rendered nearest the search bar. */
     private void activateBestResult() {
-        if (currentResults.isEmpty()) return;
+        if (com.piko.launcher.util.Compat.isEmpty(currentResults)) return;
         int sel = searchAdapter.getSelected();
         SearchResult best = sel >= 0 && sel < searchAdapter.getCount() ? searchAdapter.getResultAt(sel) : currentResults.get(0);
         if (best.type == SearchResult.TYPE_APP) {
@@ -331,13 +333,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void copyCalc(SearchResult r) {
         IntentUtil.copyToClipboard(this, r.text, r.value);
-        if (r.text != null && !r.text.isEmpty()) prefs.addCalcHistory(r.text, r.value);
+        if (r.text != null && !com.piko.launcher.util.Compat.isEmpty(r.text)) prefs.addCalcHistory(r.text, r.value);
     }
 
     /** The first enabled engine, used when the user taps the web-search row itself rather than an engine chip. */
     private String primaryEngine() {
         List<String> enabled = prefs.enabledSearchEngines();
-        return enabled.isEmpty() ? "google" : enabled.get(0);
+        return com.piko.launcher.util.Compat.isEmpty(enabled) ? "google" : enabled.get(0);
     }
 
     private HomeGridLayout createGrid(int pageId, int columns, int rows) {
@@ -432,7 +434,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 item.fy = lp.fy;
                 item.fw = lp.fw;
                 item.fh = lp.fh;
-                if (child instanceof android.appwidget.AppWidgetHostView) {
+                if (android.os.Build.VERSION.SDK_INT >= 16 && child instanceof android.appwidget.AppWidgetHostView) {
                     float d = getResources().getDisplayMetrics().density;
                     int w = Math.round(child.getWidth() / d), h = Math.round(child.getHeight() / d);
                     ((android.appwidget.AppWidgetHostView) child).updateAppWidgetSize(null, w, h, w, h);
@@ -467,6 +469,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (label != null) label.setVisibility(hide || prefs.hideAllLabels() ? View.GONE : View.VISIBLE);
     }
 
+    @android.annotation.TargetApi(16)
     private void populateGridPage(HomeGridLayout grid, int pageIndex) {
         for (HomeItem item : homeItems) {
             if (item.page != pageIndex) continue;
@@ -500,7 +503,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private boolean hasHardwareKeyboard() {
         android.content.res.Configuration c = getResources().getConfiguration();
         return c.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS
-                && c.hardKeyboardHidden == android.content.res.Configuration.HARDKEYBOARDHIDDEN_NO;
+                && (android.os.Build.VERSION.SDK_INT < 3 || c.hardKeyboardHidden == android.content.res.Configuration.HARDKEYBOARDHIDDEN_NO);
     }
 
     /**
@@ -515,7 +518,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         maxRootHeight = Math.max(maxRootHeight, h);
         int full = maxRootHeight;
         android.view.WindowInsets wi = android.os.Build.VERSION.SDK_INT >= 23 ? root.getRootWindowInsets() : null;
-        if (wi != null) {
+        if (wi != null && android.os.Build.VERSION.SDK_INT >= 21) {
             android.graphics.Point real = new android.graphics.Point();
             getWindowManager().getDefaultDisplay().getRealSize(real);
             int[] loc = new int[2];
@@ -580,7 +583,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 return;
             }
             if (c instanceof android.widget.ImageView) {
-                ((android.widget.ImageView) c).setColorFilter(i == index ? 0xFF7C9CFF : 0xFF6B7080);
+                com.piko.launcher.util.Compat.tint((android.widget.ImageView) c, i == index ? 0xFF7C9CFF : 0xFF6B7080);
             } else {
                 c.setBackgroundResource(i == index ? R.drawable.bg_dot_indicator_active : R.drawable.bg_dot_indicator);
             }
@@ -594,7 +597,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void filterAndShow(String query) {
         if (!query.equals(lastQuery)) expandedContacts.clear();
         lastQuery = query;
-        boolean idle = query.isEmpty();
+        boolean idle = com.piko.launcher.util.Compat.isEmpty(query);
         if (!idle && overview) exitOverview();
         currentResults = searchEngine.searchAll(
                 prefs.flag(Prefs.FLAG_SEARCH_APPS) ? currentApps : new ArrayList<>(),
@@ -627,7 +630,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 List<String[]> hist = prefs.calcHistory();
                 int at = 0;
                 for (String[] h : hist) currentResults.add(at++, SearchResult.forCalc(h[0], h[1]));
-                if (!hist.isEmpty()) {
+                if (!com.piko.launcher.util.Compat.isEmpty(hist)) {
                     currentResults.add(at, SearchResult.forAction(null, "Clear calculation history", "Piko", () -> {
                         prefs.clearCalcHistory();
                         searchInput.setText("");
@@ -640,18 +643,18 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && trimmed.matches("\\+?[0-9][0-9\\s\\-().]*")
                     && trimmed.replaceAll("[^0-9]", "").length() >= 3 && !hasContactWithNumber(trimmed)) {
                 // Not in the address book: still offer call/message for the typed number.
-                int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
+                int at = !com.piko.launcher.util.Compat.isEmpty(currentResults) && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
                 currentResults.add(at, SearchResult.forContact(new ContactInfo(-1, trimmed, trimmed)));
             }
             if (URL_PATTERN.matcher(trimmed).matches()) {
-                int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
+                int at = !com.piko.launcher.util.Compat.isEmpty(currentResults) && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
                 final String url = trimmed.matches("(?i)^https?://.*") ? trimmed : "https://" + trimmed;
                 String host = trimmed.replaceFirst("(?i)^https?://", "").replaceFirst("^www\\.", "").replaceFirst("[/?#].*$", "");
                 currentResults.add(at, SearchResult.forAction(null, "Open " + trimmed, "Website", () -> openUrl(url))
                         .withIcon(HomeIconViewFactory.iconForKind("url")).pinnable("url", url).chipLabel(host));
             }
-            if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && android.util.Patterns.EMAIL_ADDRESS.matcher(trimmed).matches()) {
-                int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
+            if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && EMAIL.matcher(trimmed).matches()) {
+                int at = !com.piko.launcher.util.Compat.isEmpty(currentResults) && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
                 currentResults.addAll(at, emailRows(trimmed));
             }
             if (prefs.flag(Prefs.FLAG_SEARCH_WEB)) {
@@ -747,7 +750,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void showAddToHome(View anchor, SearchResult result) {
-        PopupMenu menu = new PopupMenu(this, anchor);
+        Popup menu = new Popup(this, anchor);
         menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
         menu.setOnMenuItemClickListener(m -> {
             HomeItem item = new HomeItem();
@@ -877,7 +880,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     };
 
     private void addQuickActions(String query) {
-        String q = query.toLowerCase(java.util.Locale.ROOT);
+        String q = query.toLowerCase(java.util.Locale.ENGLISH);
         if (q.length() < 2) return;
         String[] tokens = q.split("\\s+");
         int at = 0;
@@ -885,7 +888,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (currentResults.get(i).type == SearchResult.TYPE_APP) at = i + 1;
         }
         for (String[] a : PIKO_ACTIONS) {
-            String hay = " " + a[1].toLowerCase(java.util.Locale.ROOT) + " " + a[2];
+            String hay = " " + a[1].toLowerCase(java.util.Locale.ENGLISH) + " " + a[2];
             boolean all = true;
             for (String t : tokens) if (!hay.contains(" " + t)) all = false;
             if (!all) continue;
@@ -914,12 +917,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             case "hidenames":
                 prefs.setHideAllLabels(!prefs.hideAllLabels());
                 prefs.bumpLayoutRevision();
-                recreate();
+                com.piko.launcher.util.Compat.recreate(this);
                 break;
             case "freeform":
                 prefs.setFreeform(!prefs.freeform());
                 prefs.bumpLayoutRevision();
-                recreate();
+                com.piko.launcher.util.Compat.recreate(this);
                 break;
             case "iconpack": startActivity(new Intent(this, com.piko.launcher.ui.settings.IconPackActivity.class)); break;
             case "hidden": startActivity(new Intent(this, com.piko.launcher.ui.settings.HiddenAppsActivity.class)); break;
@@ -954,7 +957,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             case "url": openUrl(data); break;
             case "intent": {
                 try {
-                    Intent i = Intent.parseUri(data.substring(data.indexOf('\n') + 1), 0);
+                    Intent i = com.piko.launcher.util.Compat.parseUri(data.substring(data.indexOf('\n') + 1));
                     i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(i);
                 } catch (Exception e) {
@@ -1002,9 +1005,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         }
         Collections.reverse(display);
         searchAdapter.submit(display, searchInput.getText().toString());
-        if (!idle && !display.isEmpty()) searchAdapter.setSelected(display.size() - 1);
+        if (!idle && !com.piko.launcher.util.Compat.isEmpty(display)) searchAdapter.setSelected(display.size() - 1);
 
-        boolean hasResults = !display.isEmpty();
+        boolean hasResults = !com.piko.launcher.util.Compat.isEmpty(display);
         resultsOverlay.setVisibility(idle ? View.GONE : View.VISIBLE);
         pageIndicator.setVisibility(!idle ? View.GONE : gridPages.size() > 1 ? View.VISIBLE : View.INVISIBLE);
         resultsList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
@@ -1020,7 +1023,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void showAppOptionsMenu(View anchor, AppInfo app) {
-        PopupMenu menu = new PopupMenu(this, anchor);
+        Popup menu = new Popup(this, anchor);
         menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
         menu.getMenu().add(0, 2, 1, R.string.menu_app_info);
         menu.getMenu().add(0, 3, 2, R.string.menu_edit_app);
@@ -1059,9 +1062,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void showAddItemMenu(HomeGridLayout grid, int pageIndex, int col, int row) {
-        PopupMenu menu = new PopupMenu(this, grid);
+        Popup menu = new Popup(this, grid);
         menu.getMenu().add(0, 1, 0, R.string.menu_add_app);
-        menu.getMenu().add(0, 2, 1, R.string.menu_add_widget);
+        if (WidgetHostController.SUPPORTED) menu.getMenu().add(0, 2, 1, R.string.menu_add_widget);
         menu.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == 1) {
                 showAppPickerDialog(pageIndex, col, row);
@@ -1088,8 +1091,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         HomeGridLayout grid = gridForPage(pager.getCurrentItem());
         int[] loc = new int[2];
         grid.getLocationOnScreen(loc);
-        float scale = grid.getWidth() > 0 ? grid.getWidth() * pagerRoot.getScaleX() : 1f;
-        float fx = (rawX - loc[0]) / scale, fy = (rawY - loc[1]) / (grid.getHeight() * pagerRoot.getScaleY());
+        float scale = grid.getWidth() > 0 ? grid.getWidth() * com.piko.launcher.util.Compat.getScaleX(pagerRoot) : 1f;
+        float fx = (rawX - loc[0]) / scale, fy = (rawY - loc[1]) / (grid.getHeight() * com.piko.launcher.util.Compat.getScaleY(pagerRoot));
         if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return false;
         int id = placingWidgetId;
         placingWidgetId = -1;
@@ -1101,6 +1104,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void startWidgetPicker(int pageIndex, int col, int row, String onlyPackage) {
+        if (!WidgetHostController.SUPPORTED) return;
         pendingWidgetPage = pageIndex;
         pendingWidgetCol = col;
         pendingWidgetRow = row;
@@ -1257,6 +1261,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
      * Most providers bind silently via {@code bindAppWidgetIdIfAllowed}; a few require the user to
      * confirm via the system's {@code ACTION_APPWIDGET_BIND} permission screen.
      */
+    @android.annotation.TargetApi(16)
     private void startWidgetBind(ComponentName provider) {
         int widgetId = widgetHostController.allocateAppWidgetId();
         pendingWidgetId = widgetId;
@@ -1270,6 +1275,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         }
     }
 
+    @android.annotation.TargetApi(16)
     private void proceedAfterWidgetBind(int widgetId) {
         AppWidgetProviderInfo info = widgetHostController.infoFor(widgetId);
         if (info == null) {
@@ -1290,6 +1296,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         placeWidget(widgetId);
     }
 
+    @android.annotation.TargetApi(16)
     private void placeWidget(int widgetId) {
         AppWidgetProviderInfo info = widgetHostController.infoFor(widgetId);
         if (info == null) {
@@ -1437,9 +1444,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 .setView(box)
                 .setPositiveButton(R.string.action_save, (d, w) -> {
                     String label = name.getText().toString().trim();
-                    if (!label.isEmpty()) item.label = label;
+                    if (!com.piko.launcher.util.Compat.isEmpty(label)) item.label = label;
                     String v = value.getText().toString().trim();
-                    if (editableTarget(item.kind) && !v.isEmpty()) {
+                    if (editableTarget(item.kind) && !com.piko.launcher.util.Compat.isEmpty(v)) {
                         if (web) {
                             String engine = nl < 0 ? item.data : item.data.substring(0, nl);
                             item.data = engine + "\n" + v;
@@ -1466,7 +1473,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (editIconPreview == null || editingShortcut == null) return;
         android.graphics.Bitmap b = editedIconPath == null ? null : android.graphics.BitmapFactory.decodeFile(editedIconPath);
         if (b != null) {
-            editIconPreview.setBackground(null);
+            com.piko.launcher.util.Compat.setBackground(editIconPreview, null);
             editIconPreview.setPadding(0, 0, 0, 0);
             editIconPreview.setImageBitmap(b);
         } else {
@@ -1508,7 +1515,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 .setView(input)
                 .setPositiveButton(R.string.action_save, (d, w) -> {
                     String name = input.getText().toString().trim();
-                    if (name.isEmpty()) return;
+                    if (com.piko.launcher.util.Compat.isEmpty(name)) return;
                     item.label = name;
                     layoutStore.saveAll(homeItems);
                     TextView label = child.findViewById(R.id.label);
@@ -1562,8 +1569,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(16), dp(16), dp(16), dp(8));
-        android.widget.GridLayout gridView = new android.widget.GridLayout(this);
-        gridView.setColumnCount(4);
+        com.piko.launcher.ui.ColumnGrid gridView = new com.piko.launcher.ui.ColumnGrid(this, 4);
         AlertDialog dialog = new AlertDialog.Builder(this).setTitle(folder.label).setView(box).create();
         int size = dp(36);
         for (String key : new ArrayList<>(folder.children)) {
@@ -1580,7 +1586,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 IntentUtil.launchApp(this, app);
             });
             cell.setOnLongClickListener(v -> {
-                PopupMenu menu = new PopupMenu(this, v);
+                Popup menu = new Popup(this, v);
                 menu.getMenu().add(0, 1, 0, R.string.menu_remove_from_folder);
                 menu.getMenu().add(0, 2, 1, R.string.menu_app_info);
                 menu.setOnMenuItemClickListener(m -> {
@@ -1625,7 +1631,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void showHomeItemMenu(HomeGridLayout grid, View child) {
         HomeItem item = (HomeItem) child.getTag();
-        PopupMenu menu = new PopupMenu(this, child);
+        Popup menu = new Popup(this, child);
         int id = 0;
         final int idInfo = item.type == HomeItem.TYPE_APP ? ++id : -1;
         final int idEdit = item.type == HomeItem.TYPE_APP ? ++id : -1;
@@ -1720,6 +1726,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         return (int) (v * getResources().getDisplayMetrics().density);
     }
 
+    @android.annotation.TargetApi(3)
     private void buildOverviewBar() {
         overviewBar = new LinearLayout(this);
         overviewBar.setOrientation(LinearLayout.VERTICAL);
@@ -1753,7 +1760,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         });
         ovStripScroll = new android.widget.HorizontalScrollView(this);
         ovStripScroll.setHorizontalScrollBarEnabled(false);
-        ovStripScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        com.piko.launcher.util.Compat.setOverscrollNever(ovStripScroll);
         ovStrip = new LinearLayout(this);
         ovStrip.setOrientation(LinearLayout.HORIZONTAL);
         ovStrip.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -1783,8 +1790,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private View edgeHint(int iconRes, int gravity, int offsetDp, View.OnClickListener click) {
         ImageView v = new ImageView(this);
         v.setImageResource(iconRes);
-        v.setColorFilter(getResources().getColor(R.color.piko_text_secondary));
-        v.setAlpha(0.8f);
+        com.piko.launcher.util.Compat.tint(v, getResources().getColor(R.color.piko_text_secondary));
+        com.piko.launcher.util.Compat.setAlpha(v, 0.8f);
         v.setVisibility(View.GONE);
         v.setPadding(dp(4), dp(4), dp(4), dp(4));
         v.setOnClickListener(click);
@@ -1802,7 +1809,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         b.setPadding(0, dp(6), 0, dp(6));
         ImageView g = new ImageView(this);
         g.setImageResource(iconRes);
-        g.setColorFilter(getResources().getColor(R.color.piko_text_primary));
+        com.piko.launcher.util.Compat.tint(g, getResources().getColor(R.color.piko_text_primary));
         g.setLayoutParams(new LinearLayout.LayoutParams(dp(20), dp(20)));
         TextView t = new TextView(this);
         t.setText(label);
@@ -1823,6 +1830,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private int dragFrom = -1;
 
     /** Rebuilds the row of page thumbnails (tap = edit that page, hold + drag = reorder, trailing + = add). */
+    @android.annotation.TargetApi(3)
     private void refreshStrip() {
         if (ovStrip == null || dragCard != null) return;
         int n = gridPages.size();
@@ -1837,7 +1845,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             for (int i = 0; i < n; i++) {
                 ((com.piko.launcher.ui.home.PageThumbView) ovStrip.getChildAt(i))
                         .bind(homeItems, i, prefs.columns(), prefs.rows(), i == cur, i == home);
-                ovStrip.getChildAt(i).setTranslationX(0);
+                com.piko.launcher.util.Compat.setTranslationX(ovStrip.getChildAt(i), 0);
             }
             View c = ovStrip.getChildAt(cur);
             ovStripScroll.smoothScrollTo(Math.max(0, c.getLeft() - (ovStripScroll.getWidth() - c.getWidth()) / 2), 0);
@@ -1857,17 +1865,16 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 dragStartRawX = lastStripRawX;
                 dragStartScroll = ovStripScroll.getScrollX();
                 dragTarget = dragFrom;
-                v.setElevation(dp(8));
-                v.setScaleX(1.1f);
-                v.setScaleY(1.1f);
+                com.piko.launcher.util.Compat.setElevation(v, dp(8));
+                com.piko.launcher.util.Compat.setScale(v, 1.1f);
                 ovStripScroll.requestDisallowInterceptTouchEvent(true);
-                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                com.piko.launcher.util.Compat.haptic(v, android.view.HapticFeedbackConstants.LONG_PRESS);
                 return true;
             });
             thumb.setOnTouchListener((v, ev) -> {
                 lastStripRawX = ev.getRawX();
                 if (dragCard != v) return false;
-                switch (ev.getActionMasked()) {
+                switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
                     case MotionEvent.ACTION_MOVE: dragStripCard(ev.getRawX()); return true;
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL: dropStripCard(); return true;
@@ -1881,7 +1888,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (n < 8) {
             ImageView plus = new ImageView(this);
             plus.setImageResource(R.drawable.ic_add_circle);
-            plus.setColorFilter(getResources().getColor(R.color.piko_accent));
+            com.piko.launcher.util.Compat.tint(plus, getResources().getColor(R.color.piko_accent));
             plus.setPadding(dp(14), dp(14), dp(14), dp(14));
             plus.setBackgroundResource(R.drawable.bg_pressable);
             plus.setOnClickListener(v -> addPage(gridPages.size()));
@@ -1904,7 +1911,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void dragStripCard(float rawX) {
         float slot = dragCard.getWidth() + dp(10);
         float dx = rawX - dragStartRawX + (ovStripScroll.getScrollX() - dragStartScroll);
-        dragCard.setTranslationX(dx);
+        com.piko.launcher.util.Compat.setTranslationX(dragCard, dx);
         // Other cards slide aside, so the dragged view itself is never re-parented mid-gesture.
         dragTarget = Math.max(0, Math.min(gridPages.size() - 1, Math.round(dragFrom + dx / slot)));
         for (int i = 0; i < gridPages.size(); i++) {
@@ -1913,7 +1920,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             float shift = 0;
             if (dragFrom < dragTarget && i > dragFrom && i <= dragTarget) shift = -slot;
             else if (dragFrom > dragTarget && i >= dragTarget && i < dragFrom) shift = slot;
-            c.animate().translationX(shift).setDuration(120).start();
+            com.piko.launcher.util.Compat.animate(c).translationX(shift).setDuration(120).start();
         }
         // Keep the strip scrolling while the finger sits at an edge.
         int[] loc = new int[2];
@@ -1950,7 +1957,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (overview) {
-            switch (ev.getActionMasked()) {
+            switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
                 case MotionEvent.ACTION_DOWN: {
                     android.graphics.Rect r = new android.graphics.Rect();
                     ovTap = pagerRoot.getGlobalVisibleRect(r) && r.contains((int) ev.getRawX(), (int) ev.getRawY());
@@ -1988,12 +1995,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         searchInput.clearFocus();
         hideKeyboard();
         pagerRoot.setBackgroundResource(R.drawable.bg_page_card);
-        overviewBar.setAlpha(0f);
+        com.piko.launcher.util.Compat.setAlpha(overviewBar, 0f);
         overviewBar.setVisibility(View.VISIBLE);
-        overviewBar.animate().alpha(1f).setDuration(240).start();
-        overviewTop.setAlpha(0f);
+        com.piko.launcher.util.Compat.animate(overviewBar).alpha(1f).setDuration(240).start();
+        com.piko.launcher.util.Compat.setAlpha(overviewTop, 0f);
         overviewTop.setVisibility(View.VISIBLE);
-        overviewTop.animate().alpha(1f).setDuration(240).start();
+        com.piko.launcher.util.Compat.animate(overviewTop).alpha(1f).setDuration(240).start();
         // Fit the zoomed page into whatever the top strip and bottom buttons leave free.
         View rootView = findViewById(R.id.root);
         rootView.post(() -> {
@@ -2004,10 +2011,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             float rh = Math.max(1, pagerRoot.getHeight());
             float scale = Math.max(0.5f, Math.min(0.9f, (rootView.getHeight() - top - bottom - dp(12)) / rh));
             float ty = (top - bottom) / 2f;
-            pagerRoot.animate().scaleX(scale).scaleY(scale).translationY(ty).setDuration(240)
+            com.piko.launcher.util.Compat.animate(pagerRoot).scaleX(scale).scaleY(scale).translationY(ty).setDuration(240)
                     .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         });
-        pager.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        com.piko.launcher.util.Compat.haptic(pager, android.view.HapticFeedbackConstants.LONG_PRESS);
         updateOverviewTitle();
     }
 
@@ -2016,10 +2023,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         overview = false;
         cancelPlacing();
         for (HomeGridLayout g : gridPages) g.setLongPressEnabled(true);
-        pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
-                .withEndAction(() -> pagerRoot.setBackground(null)).start();
-        overviewBar.animate().alpha(0f).setDuration(180).withEndAction(() -> overviewBar.setVisibility(View.GONE)).start();
-        overviewTop.animate().alpha(0f).setDuration(180).withEndAction(() -> overviewTop.setVisibility(View.GONE)).start();
+        com.piko.launcher.util.Compat.animate(pagerRoot).scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
+                .withEndAction(() -> com.piko.launcher.util.Compat.setBackground(pagerRoot, null)).start();
+        com.piko.launcher.util.Compat.animate(overviewBar).alpha(0f).setDuration(180).withEndAction(() -> overviewBar.setVisibility(View.GONE)).start();
+        com.piko.launcher.util.Compat.animate(overviewTop).alpha(0f).setDuration(180).withEndAction(() -> overviewTop.setVisibility(View.GONE)).start();
         ovAddPage.setVisibility(View.GONE);
         ovAddLeft.setVisibility(View.GONE);
         ovPrev.setVisibility(View.GONE);
@@ -2216,7 +2223,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     // ---------------------------------------------------------- shortcuts row
 
     private String initials(String name) {
-        if (name == null || name.isEmpty()) return "?";
+        if (name == null || com.piko.launcher.util.Compat.isEmpty(name)) return "?";
         return name.trim().substring(0, 1).toUpperCase();
     }
 
@@ -2258,7 +2265,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private List<AppInfo> visibleApps() {
         java.util.Set<String> hidden = prefs.hiddenApps();
         List<AppInfo> all = com.piko.launcher.core.AppCustomizationStore.get(this).applyAll(rawApps);
-        if (hidden.isEmpty()) return all;
+        if (com.piko.launcher.util.Compat.isEmpty(hidden)) return all;
         List<AppInfo> result = new ArrayList<>(all.size());
         for (AppInfo app : all) if (!hidden.contains(app.key())) result.add(app);
         return result;
@@ -2283,7 +2290,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     protected void onResume() {
         super.onResume();
         if (prefs.layoutRevision() != builtLayoutRevision) {
-            recreate();
+            com.piko.launcher.util.Compat.recreate(this);
             return;
         }
         widgetHostController.startListening();
@@ -2297,7 +2304,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         widgetHostController.stopListening();
         for (HomeGridLayout g : gridPages) g.stopResize();
         cancelPlacing();
-        if (searchInput != null && !isChangingConfigurations()) searchInput.setText("");
+        if (searchInput != null && !com.piko.launcher.util.Compat.isChangingConfigurations(this)) searchInput.setText("");
     }
 
     @Override
@@ -2323,14 +2330,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (searchInput == null || overview) return;
         searchInput.requestFocus();
         searchInput.post(() -> {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            if (imm != null) imm.showSoftInput(searchInput, InputMethodManager.SHOW_IMPLICIT);
+            com.piko.launcher.util.Compat.showKeyboard(searchInput);
         });
     }
 
     private void hideKeyboard() {
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (imm != null) imm.hideSoftInputFromWindow(searchInput.getWindowToken(), 0);
+        com.piko.launcher.util.Compat.hideKeyboard(searchInput);
     }
 
     @Override

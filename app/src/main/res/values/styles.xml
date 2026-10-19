@@ -1,39 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Piko.Theme" parent="android:Theme.Material.NoActionBar">
+    <style name="Piko.Theme" parent="android:Theme.Black.NoTitleBar">
         <item name="android:colorBackground">@color/piko_bg</item>
         <item name="android:windowBackground">@color/piko_bg</item>
         <item name="android:textColorPrimary">@color/piko_text_primary</item>
         <item name="android:textColorSecondary">@color/piko_text_secondary</item>
-        <item name="android:navigationBarColor">@color/piko_bg</item>
-        <item name="android:statusBarColor">@color/piko_bg</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">false</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:colorEdgeEffect">@color/piko_accent</item>
     </style>
 
     <style name="Piko.Theme.Transparent" parent="Piko.Theme">
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
         <item name="android:windowAnimationStyle">@null</item>
     </style>
 
     <style name="Piko.Text" parent="">
-        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textColor">@color/piko_text_primary</item>
     </style>
 
     <style name="Piko.Text.Label">
-        <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:textColor">@color/piko_text_primary</item>
         <item name="android:textSize">13sp</item>
     </style>
 
     <style name="Piko.Text.Hint">
-        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textColor">@color/piko_text_hint</item>
         <item name="android:textSize">15sp</item>
     </style>

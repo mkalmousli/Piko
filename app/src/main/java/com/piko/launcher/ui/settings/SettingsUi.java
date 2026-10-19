@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import com.piko.launcher.R;
@@ -47,15 +46,15 @@ public final class SettingsUi {
         LinearLayout bar = new LinearLayout(activity);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setPadding(0, (int) (24 * d), (int) (16 * d), 0);
-        bar.setElevation(4 * d);
+        com.piko.launcher.util.Compat.setElevation(bar, 4 * d);
         bar.setBackgroundColor(activity.getResources().getColor(R.color.piko_bg));
 
         android.widget.ImageView back = new android.widget.ImageView(activity);
         back.setImageResource(R.drawable.ic_back);
         back.setScaleType(android.widget.ImageView.ScaleType.CENTER);
         back.setBackgroundResource(R.drawable.bg_icon_button);
-        back.setContentDescription("Back");
-        back.setOnClickListener(v -> activity.onBackPressed());
+        if (android.os.Build.VERSION.SDK_INT >= 4) back.setContentDescription("Back");
+        back.setOnClickListener(v -> activity.finish());
         LinearLayout.LayoutParams backLp = new LinearLayout.LayoutParams((int) (44 * d), (int) (44 * d));
         backLp.setMargins((int) (8 * d), 0, (int) (8 * d), 0);
         bar.addView(back, backLp);
@@ -100,13 +99,13 @@ public final class SettingsUi {
         root.addView(t);
     }
 
-    Switch toggle(String label, boolean checked, CompoundButton.OnCheckedChangeListener l) {
+    CompoundButton toggle(String label, boolean checked, CompoundButton.OnCheckedChangeListener l) {
         LinearLayout row = new LinearLayout(activity);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, dp(8), 0, dp(8));
         TextView t = text(label, 15, R.color.piko_text_primary);
         row.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-        Switch sw = new Switch(activity);
+        CompoundButton sw = com.piko.launcher.util.Compat.newSwitch(activity);
         sw.setChecked(checked);
         sw.setOnCheckedChangeListener(l);
         row.addView(sw);

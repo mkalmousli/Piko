@@ -47,10 +47,10 @@ public final class HomeLayoutStore {
             for (HomeItem item : items) arr.put(item.toJson());
         } catch (JSONException ignored) {
         }
-        sp.edit().putString(KEY_ITEMS, arr.toString()).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putString(KEY_ITEMS, arr.toString()));
     }
 
     public void clear() {
-        sp.edit().remove(KEY_ITEMS).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().remove(KEY_ITEMS));
     }
 }

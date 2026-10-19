@@ -82,6 +82,7 @@ public final class ContactIndexer {
     }
 
     private List<ContactInfo> queryAllContacts() {
+        if (android.os.Build.VERSION.SDK_INT < 5) return new ArrayList<>();
         Map<Long, ContactInfo> byContactId = new LinkedHashMap<>();
         String[] projection = {
                 ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
@@ -115,7 +116,7 @@ public final class ContactIndexer {
     }
 
     private void registerContentObserver() {
-        if (!observerRegistered.compareAndSet(false, true)) return;
+        if (android.os.Build.VERSION.SDK_INT < 5 || !observerRegistered.compareAndSet(false, true)) return;
         appContext.getContentResolver().registerContentObserver(
                 ContactsContract.Contacts.CONTENT_URI, true,
                 new ContentObserver(mainHandler) {

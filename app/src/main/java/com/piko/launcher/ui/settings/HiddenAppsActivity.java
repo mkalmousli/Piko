@@ -71,7 +71,7 @@ public final class HiddenAppsActivity extends Activity {
             public void onTextChanged(CharSequence s, int a, int b, int c) {
                 String q = s.toString().trim().toLowerCase();
                 for (int i = 0; i < rows.size(); i++) {
-                    rows.get(i).setVisibility(q.isEmpty() || labels.get(i).contains(q) ? View.VISIBLE : View.GONE);
+                    rows.get(i).setVisibility(com.piko.launcher.util.Compat.isEmpty(q) || labels.get(i).contains(q) ? View.VISIBLE : View.GONE);
                 }
             }
 

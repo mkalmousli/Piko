@@ -20,7 +20,7 @@ public final class IconPackActivity extends Activity {
         Prefs prefs = Prefs.get(this);
         SettingsUi ui = new SettingsUi(this, "Icon pack");
         List<IconPacks.Pack> packs = IconPacks.get(this).installed();
-        ui.hint(packs.isEmpty()
+        ui.hint(com.piko.launcher.util.Compat.isEmpty(packs)
                 ? "No icon packs found. Install one from your app store (ADW, Nova and Apex packs work)."
                 : "Applies to the home screen and search results.");
 
@@ -40,7 +40,7 @@ public final class IconPackActivity extends Activity {
 
     private void addOption(RadioGroup group, String label, String pkg, String current) {
         RadioButton rb = new RadioButton(this);
-        rb.setId(android.view.View.generateViewId());
+        rb.setId(com.piko.launcher.util.Compat.generateViewId());
         rb.setText(label);
         rb.setTag(pkg);
         rb.setTextColor(getResources().getColor(com.piko.launcher.R.color.piko_text_primary));

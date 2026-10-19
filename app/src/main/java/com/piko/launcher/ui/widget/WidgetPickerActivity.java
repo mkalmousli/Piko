@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
  * widget shown with a live preview. Replaces the stock system picker so we
  * control the whole bind flow ourselves (see MainActivity's widget methods).
  */
+@android.annotation.TargetApi(16)
 public final class WidgetPickerActivity extends Activity {
 
     public static final String EXTRA_PROVIDER = "extra_provider";
@@ -148,13 +149,13 @@ public final class WidgetPickerActivity extends Activity {
         try {
             return pm.getApplicationIcon(packageName);
         } catch (PackageManager.NameNotFoundException e) {
-            return getDrawable(R.drawable.ic_placeholder_app);
+            return com.piko.launcher.util.Compat.drawable(getResources(), R.drawable.ic_placeholder_app);
         }
     }
 
     private void applyFilter(String rawQuery) {
         String query = rawQuery.trim().toLowerCase();
-        boolean searching = !query.isEmpty();
+        boolean searching = !com.piko.launcher.util.Compat.isEmpty(query);
 
         List<WidgetProviderGroup> filtered = new ArrayList<>();
         for (WidgetProviderGroup group : allGroups) {
@@ -173,12 +174,12 @@ public final class WidgetPickerActivity extends Activity {
                     partial.widgets.add(info);
                 }
             }
-            if (!partial.widgets.isEmpty()) filtered.add(partial);
+            if (!com.piko.launcher.util.Compat.isEmpty(partial.widgets)) filtered.add(partial);
         }
 
         adapter.submit(filtered);
-        emptyText.setVisibility(filtered.isEmpty() ? android.view.View.VISIBLE : android.view.View.GONE);
-        list.setVisibility(filtered.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+        emptyText.setVisibility(com.piko.launcher.util.Compat.isEmpty(filtered) ? android.view.View.VISIBLE : android.view.View.GONE);
+        list.setVisibility(com.piko.launcher.util.Compat.isEmpty(filtered) ? android.view.View.GONE : android.view.View.VISIBLE);
 
         if (searching || getIntent().getStringExtra(EXTRA_PACKAGE) != null) {
             for (int i = 0; i < filtered.size(); i++) list.expandGroup(i);

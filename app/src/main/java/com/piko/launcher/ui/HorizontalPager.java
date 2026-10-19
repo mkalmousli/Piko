@@ -36,11 +36,10 @@ public final class HorizontalPager extends ViewGroup {
     public HorizontalPager(Context context) {
         super(context);
         scroller = new Scroller(context, new DecelerateInterpolator(1.6f));
-        ViewConfiguration vc = ViewConfiguration.get(context);
-        touchSlop = vc.getScaledTouchSlop();
-        minFlingVelocity = vc.getScaledMinimumFlingVelocity();
-        maxFlingVelocity = vc.getScaledMaximumFlingVelocity();
-        setChildrenDrawingOrderEnabled(false);
+        touchSlop = com.piko.launcher.util.Compat.touchSlop(context);
+        minFlingVelocity = com.piko.launcher.util.Compat.minFling(context);
+        maxFlingVelocity = com.piko.launcher.util.Compat.maxFling(context);
+        if (android.os.Build.VERSION.SDK_INT >= 7) setChildrenDrawingOrderEnabled(false);
     }
 
     public void setOnPageChangeListener(OnPageChangeListener l) {
@@ -60,7 +59,7 @@ public final class HorizontalPager extends ViewGroup {
         }
         if (smooth) {
             scroller.startScroll(getScrollX(), 0, targetX - getScrollX(), 0, 320);
-            postInvalidateOnAnimation();
+            com.piko.launcher.util.Compat.postInvalidate(this);
         } else {
             scrollTo(targetX, 0);
         }
@@ -81,16 +80,15 @@ public final class HorizontalPager extends ViewGroup {
             View child = getChildAt(i);
             float offset = (i * width - l) / (float) width;
             if (!tilt3d || Math.abs(offset) >= 1f || offset == 0f) {
-                child.setRotationY(0f);
-                child.setAlpha(1f);
-                child.setTranslationX(0f);
+                com.piko.launcher.util.Compat.setRotationY(child, 0f);
+                com.piko.launcher.util.Compat.setAlpha(child, 1f);
+                com.piko.launcher.util.Compat.setTranslationX(child, 0f);
                 continue;
             }
-            child.setCameraDistance(10000 * density);
-            child.setPivotX(offset > 0 ? 0f : width);
-            child.setPivotY(getHeight() / 2f);
-            child.setRotationY(-offset * 28f);
-            child.setAlpha(1f - Math.abs(offset) * 0.35f);
+            com.piko.launcher.util.Compat.setCameraDistance(child, 10000 * density);
+            com.piko.launcher.util.Compat.setPivot(child, offset > 0 ? 0f : width, getHeight() / 2f);
+            com.piko.launcher.util.Compat.setRotationY(child, -offset * 28f);
+            com.piko.launcher.util.Compat.setAlpha(child, 1f - Math.abs(offset) * 0.35f);
         }
     }
 
@@ -128,7 +126,7 @@ public final class HorizontalPager extends ViewGroup {
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
         if (!swipeEnabled) return false;
-        switch (ev.getActionMasked()) {
+        switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
             case MotionEvent.ACTION_DOWN:
                 downX = lastX = ev.getX();
                 downY = ev.getY();
@@ -155,7 +153,7 @@ public final class HorizontalPager extends ViewGroup {
         if (velocityTracker == null) velocityTracker = VelocityTracker.obtain();
         velocityTracker.addMovement(ev);
 
-        switch (ev.getActionMasked()) {
+        switch (com.piko.launcher.util.Compat.actionMasked(ev)) {
             case MotionEvent.ACTION_DOWN:
                 downX = lastX = ev.getX();
                 if (!scroller.isFinished()) scroller.abortAnimation();
@@ -175,7 +173,8 @@ public final class HorizontalPager extends ViewGroup {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 if (dragging) {
-                    velocityTracker.computeCurrentVelocity(1000, maxFlingVelocity);
+                    if (android.os.Build.VERSION.SDK_INT >= 4) velocityTracker.computeCurrentVelocity(1000, maxFlingVelocity);
+                    else velocityTracker.computeCurrentVelocity(1000);
                     float vx = velocityTracker.getXVelocity();
                     settle(vx);
                 }
@@ -208,7 +207,7 @@ public final class HorizontalPager extends ViewGroup {
     public void computeScroll() {
         if (scroller.computeScrollOffset()) {
             scrollTo(scroller.getCurrX(), scroller.getCurrY());
-            postInvalidateOnAnimation();
+            com.piko.launcher.util.Compat.postInvalidate(this);
         }
     }
 }

@@ -194,13 +194,13 @@ public final class SearchResultAdapter extends BaseAdapter {
         holder.chevron.setVisibility(header ? View.VISIBLE : View.GONE);
         if (header) {
             holder.chevron.setImageResource(R.drawable.ic_expand);
-            holder.chevron.setRotation(open ? 180f : 0f);
-            holder.chevron.setColorFilter(open ? 0xFF7C9CFF : 0xFF9AA0AC);
+            com.piko.launcher.util.Compat.setRotation(holder.chevron, open ? 180f : 0f);
+            com.piko.launcher.util.Compat.tint(holder.chevron, open ? 0xFF7C9CFF : 0xFF9AA0AC);
         }
         holder.title.setTextColor(open ? 0xFF7C9CFF : 0xFFF5F6F8);
         holder.badge.setTextColor(0xFFFFFFFF);
         holder.subtitle.setText(result.subtitle);
-        holder.subtitle.setVisibility(result.subtitle == null || result.subtitle.isEmpty() ? View.GONE : View.VISIBLE);
+        holder.subtitle.setVisibility(result.subtitle == null || com.piko.launcher.util.Compat.isEmpty(result.subtitle) ? View.GONE : View.VISIBLE);
         return view;
     }
 
@@ -220,13 +220,13 @@ public final class SearchResultAdapter extends BaseAdapter {
             android.graphics.drawable.GradientDrawable oval = new android.graphics.drawable.GradientDrawable();
             oval.setShape(android.graphics.drawable.GradientDrawable.OVAL);
             oval.setColor(chip.color);
-            circle.setBackground(oval);
+            com.piko.launcher.util.Compat.setBackground(circle, oval);
             int size = Math.round(44 * d);
             col.addView(circle, new LinearLayout.LayoutParams(size, size));
             if (chip.icon != 0) {
                 ImageView icon = new ImageView(context);
                 icon.setImageResource(chip.icon);
-                icon.setColorFilter(0xFFFFFFFF);
+                com.piko.launcher.util.Compat.tint(icon, 0xFFFFFFFF);
                 int is = Math.round(22 * d);
                 circle.addView(icon, new android.widget.FrameLayout.LayoutParams(is, is, android.view.Gravity.CENTER));
             } else {
@@ -332,8 +332,8 @@ public final class SearchResultAdapter extends BaseAdapter {
         ContactInfo contact = result.contact;
         holder.label.setText(TextHighlighter.highlight(context, contact.name, currentQuery));
         holder.number.setText(contact.phoneNumber);
-        holder.number.setVisibility(contact.phoneNumber.isEmpty() ? View.GONE : View.VISIBLE);
-        holder.avatar.setText(contact.name.isEmpty() ? "?" : contact.name.substring(0, 1).toUpperCase());
+        holder.number.setVisibility(com.piko.launcher.util.Compat.isEmpty(contact.phoneNumber) ? View.GONE : View.VISIBLE);
+        holder.avatar.setText(com.piko.launcher.util.Compat.isEmpty(contact.name) ? "?" : contact.name.substring(0, 1).toUpperCase());
         Prefs prefs = Prefs.get(context);
         holder.btnCall.setVisibility(prefs.flag(Prefs.FLAG_ACTION_CALL) ? View.VISIBLE : View.GONE);
         holder.btnSms.setVisibility(prefs.flag(Prefs.FLAG_ACTION_SMS) ? View.VISIBLE : View.GONE);

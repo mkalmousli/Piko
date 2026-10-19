@@ -56,7 +56,7 @@ public final class BackgroundActivity extends Activity {
     private void commit() {
         prefs.setBackground(mode, c1, c2, angle, image, dim);
         prefs.bumpLayoutRevision();
-        if (preview != null) preview.setBackground(Background.build(prefs));
+        if (preview != null) com.piko.launcher.util.Compat.setBackground(preview, Background.build(prefs));
     }
 
     private void build() {
@@ -68,7 +68,7 @@ public final class BackgroundActivity extends Activity {
         LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(-1, ui.dp(120));
         plp.setMargins(ui.dp(16), ui.dp(8), ui.dp(16), ui.dp(8));
         host.addView(preview, plp);
-        preview.setBackground(previewDrawable());
+        com.piko.launcher.util.Compat.setBackground(preview, previewDrawable());
 
         ui.section("Type");
         for (int i = 0; i < MODES.length; i++) {
@@ -126,7 +126,7 @@ public final class BackgroundActivity extends Activity {
                 @Override public void onProgressChanged(SeekBar s, int p, boolean user) {
                     dim = p;
                     label.setText(p + "%");
-                    if (preview != null) preview.setBackground(previewDrawable());
+                    if (preview != null) com.piko.launcher.util.Compat.setBackground(preview, previewDrawable());
                 }
                 @Override public void onStartTrackingTouch(SeekBar s) {}
                 @Override public void onStopTrackingTouch(SeekBar s) { commit(); }
@@ -158,7 +158,7 @@ public final class BackgroundActivity extends Activity {
                 g.setShape(GradientDrawable.OVAL);
                 g.setColor(color);
                 g.setStroke(ui.dp(color == selected ? 3 : 1), color == selected ? 0xFF7C9CFF : 0x55FFFFFF);
-                sw.setBackground(g);
+                com.piko.launcher.util.Compat.setBackground(sw, g);
                 sw.setOnClickListener(v -> cb.on(color));
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, ui.dp(40), 1f);
                 lp.setMargins(ui.dp(4), ui.dp(4), ui.dp(4), ui.dp(4));

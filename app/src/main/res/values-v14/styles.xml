@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Piko.Theme" parent="android:Theme.Holo.NoActionBar">
+        <item name="android:colorBackground">@color/piko_bg</item>
+        <item name="android:windowBackground">@color/piko_bg</item>
+        <item name="android:textColorPrimary">@color/piko_text_primary</item>
+        <item name="android:textColorSecondary">@color/piko_text_secondary</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
+    </style>
+</resources>

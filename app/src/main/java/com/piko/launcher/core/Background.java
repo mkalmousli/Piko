@@ -28,7 +28,7 @@ public final class Background {
                 break;
             case Prefs.BG_IMAGE: {
                 Bitmap b = prefs.bgImage() == null ? null : BitmapFactory.decodeFile(prefs.bgImage());
-                base = b == null ? new ColorDrawable(prefs.bgColor1()) : new BitmapDrawable(null, b);
+                base = b == null ? new ColorDrawable(prefs.bgColor1()) : com.piko.launcher.util.Compat.bitmapDrawable(null, b);
                 break;
             }
             case Prefs.BG_WALLPAPER:
@@ -59,9 +59,11 @@ public final class Background {
         if (wallpaper) activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
         // The window background fills the whole screen, so the system bars (made transparent) show it too.
         activity.getWindow().setBackgroundDrawable(bg);
-        activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
-        activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            activity.getWindow().setStatusBarColor(Color.TRANSPARENT);
+            activity.getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        }
         if (android.os.Build.VERSION.SDK_INT >= 29) activity.getWindow().setNavigationBarContrastEnforced(false);
-        root.setBackground(null);
+        com.piko.launcher.util.Compat.setBackground(root, null);
     }
 }

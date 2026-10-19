@@ -37,7 +37,7 @@ public final class SearchEngine {
         String query = rawQuery == null ? "" : rawQuery.trim().toLowerCase();
         List<AppInfo> result = new ArrayList<>(source.size());
 
-        if (query.isEmpty()) {
+        if (com.piko.launcher.util.Compat.isEmpty(query)) {
             result.addAll(source);
             Collections.sort(result, (a, b) -> {
                 int ua = usageStore.count(a.key());
@@ -70,7 +70,7 @@ public final class SearchEngine {
     public List<SearchResult> searchAll(List<AppInfo> apps, List<ContactInfo> contactsSource, String rawQuery) {
         String query = rawQuery == null ? "" : rawQuery.trim().toLowerCase();
         List<SearchResult> result = new ArrayList<>();
-        if (query.isEmpty()) return result;
+        if (com.piko.launcher.util.Compat.isEmpty(query)) return result;
 
         List<ScoredResult> scored = new ArrayList<>();
         for (AppInfo app : apps) {
@@ -84,9 +84,9 @@ public final class SearchEngine {
         String queryDigits = query.replaceAll("[^0-9]", "");
         for (ContactInfo contact : contactsSource) {
             int s = score(contact.nameLower, query);
-            if (s == NO_MATCH && !queryDigits.isEmpty()) {
+            if (s == NO_MATCH && !com.piko.launcher.util.Compat.isEmpty(queryDigits)) {
                 String numberDigits = contact.phoneNumber.replaceAll("[^0-9]", "");
-                if (!numberDigits.isEmpty() && numberDigits.contains(queryDigits)) {
+                if (!com.piko.launcher.util.Compat.isEmpty(numberDigits) && numberDigits.contains(queryDigits)) {
                     s = SCORE_CONTAINS;
                 }
             }
@@ -117,7 +117,7 @@ public final class SearchEngine {
         // Multi-word query: every word must match somewhere in the label.
         int total = 0;
         for (String word : queryWords) {
-            if (word.isEmpty()) continue;
+            if (com.piko.launcher.util.Compat.isEmpty(word)) continue;
             int s = scoreSingle(label, word);
             if (s == NO_MATCH) return NO_MATCH;
             total += s;
@@ -126,7 +126,7 @@ public final class SearchEngine {
     }
 
     private int scoreSingle(String label, String query) {
-        if (query.isEmpty()) return NO_MATCH;
+        if (com.piko.launcher.util.Compat.isEmpty(query)) return NO_MATCH;
         if (label.equals(query)) return SCORE_EXACT;
         if (label.startsWith(query)) return SCORE_PREFIX - lengthPenalty(label, query);
 
@@ -149,7 +149,7 @@ public final class SearchEngine {
         if (query.length() < 2 || query.length() > words.length) return false;
         int qi = 0;
         for (String word : words) {
-            if (word.isEmpty()) continue;
+            if (com.piko.launcher.util.Compat.isEmpty(word)) continue;
             if (qi >= query.length()) break;
             if (word.charAt(0) != query.charAt(qi)) return false;
             qi++;

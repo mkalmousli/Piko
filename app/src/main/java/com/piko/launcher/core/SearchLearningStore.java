@@ -34,21 +34,21 @@ public final class SearchLearningStore {
 
     public void recordSelection(String query, String itemKey) {
         String normalized = normalize(query);
-        if (normalized.isEmpty() || itemKey == null) return;
+        if (com.piko.launcher.util.Compat.isEmpty(normalized) || itemKey == null) return;
 
         JSONObject counts = loadCounts(normalized);
         int current = counts.optInt(itemKey, 0);
         try {
             counts.put(itemKey, current + 1);
             trimIfNeeded(counts);
-            sp.edit().putString(prefKey(normalized), counts.toString()).apply();
+            com.piko.launcher.util.Compat.apply(sp.edit().putString(prefKey(normalized), counts.toString()));
         } catch (JSONException ignored) {
         }
     }
 
     public int boostFor(String query, String itemKey) {
         String normalized = normalize(query);
-        if (normalized.isEmpty() || itemKey == null) return 0;
+        if (com.piko.launcher.util.Compat.isEmpty(normalized) || itemKey == null) return 0;
         return loadCounts(normalized).optInt(itemKey, 0);
     }
 

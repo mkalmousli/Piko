@@ -51,7 +51,7 @@ public final class AppEditActivity extends Activity {
     private String pendingIconPath;
     private ImageView iconPreview;
     private EditText nameInput, tagsInput;
-    private android.widget.Switch hideLabelSwitch;
+    private android.widget.CompoundButton hideLabelSwitch;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,7 +108,7 @@ public final class AppEditActivity extends Activity {
         if (existing != null) tagsInput.setText(existing.tags);
         root.addView(tagsInput);
 
-        hideLabelSwitch = new android.widget.Switch(this);
+        hideLabelSwitch = com.piko.launcher.util.Compat.newSwitch(this);
         hideLabelSwitch.setText(R.string.hide_name_on_home);
         hideLabelSwitch.setTextColor(getResources().getColor(R.color.piko_text_primary));
         hideLabelSwitch.setPadding(0, dp(16), 0, 0);
@@ -176,7 +176,7 @@ public final class AppEditActivity extends Activity {
     private void pickFromPack() {
         com.piko.launcher.core.IconPacks packs = com.piko.launcher.core.IconPacks.get(this);
         java.util.List<String> names = packs.drawableNames();
-        if (names.isEmpty()) {
+        if (com.piko.launcher.util.Compat.isEmpty(names)) {
             Toast.makeText(this, "Choose an icon pack in Settings first", Toast.LENGTH_LONG).show();
             return;
         }
@@ -216,10 +216,10 @@ public final class AppEditActivity extends Activity {
             }
         };
         Runnable refresh = () -> {
-            String q = filter.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+            String q = filter.getText().toString().trim().toLowerCase(java.util.Locale.ENGLISH);
             shown.clear();
             for (int i = 0; i < labels.size(); i++) {
-                if (q.isEmpty() || labels.get(i).toLowerCase(java.util.Locale.ROOT).contains(q)) shown.add(i);
+                if (com.piko.launcher.util.Compat.isEmpty(q) || labels.get(i).toLowerCase(java.util.Locale.ENGLISH).contains(q)) shown.add(i);
             }
             adapter.notifyDataSetChanged();
         };
@@ -308,7 +308,7 @@ public final class AppEditActivity extends Activity {
     private void save() {
         String name = nameInput.getText().toString().trim();
         String tags = tagsInput.getText().toString().trim();
-        store.save(key, name.isEmpty() ? null : name, tags, pendingIconPath, hideLabelSwitch.isChecked());
+        store.save(key, com.piko.launcher.util.Compat.isEmpty(name) ? null : name, tags, pendingIconPath, hideLabelSwitch.isChecked());
         Prefs.get(this).bumpLayoutRevision();
         IconCache.get(this).evict(null);
         finish();

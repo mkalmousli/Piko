@@ -106,12 +106,12 @@ public final class IntentUtil {
         }
         String digits = onlyDigits(phoneNumber);
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/" + digits));
-        intent.setPackage(pkg);
+        Compat.setPackage(intent, pkg);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             context.startActivity(intent);
         } catch (ActivityNotFoundException e) {
-            intent.setPackage(null);
+            Compat.setPackage(intent, null);
             context.startActivity(intent);
         }
     }
@@ -124,7 +124,7 @@ public final class IntentUtil {
         }
         String jid = onlyDigits(phoneNumber) + "@s.whatsapp.net";
         Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setPackage(pkg);
+        Compat.setPackage(intent, pkg);
         intent.setClassName(pkg, pkg + ".voipcalling.VoipActivity");
         intent.putExtra("jid", jid);
         intent.putExtra("call_type", video ? "video" : "voice");
@@ -167,6 +167,7 @@ public final class IntentUtil {
 
     /** Opens the system Contacts app on this contact's detail page. */
     public static void openContactInfo(Context context, long contactId) {
+        if (android.os.Build.VERSION.SDK_INT < 5) return;
         Uri uri = ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, contactId);
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -178,8 +179,7 @@ public final class IntentUtil {
     }
 
     public static void copyToClipboard(Context context, String label, String text) {
-        ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cm != null) cm.setPrimaryClip(ClipData.newPlainText(label, text));
+        com.piko.launcher.util.Compat.copyToClipboard(context, label, text);
         Toast.makeText(context, R.string.copied_to_clipboard, Toast.LENGTH_SHORT).show();
     }
 

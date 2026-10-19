@@ -55,7 +55,7 @@ public final class CurrencyConverter {
                 conn.setReadTimeout(5000);
                 StringBuilder body = new StringBuilder();
                 try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                        new InputStreamReader(conn.getInputStream(), "UTF-8"))) {
                     String line;
                     while ((line = reader.readLine()) != null) body.append(line);
                 }

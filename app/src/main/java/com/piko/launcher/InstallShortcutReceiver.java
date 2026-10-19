@@ -41,7 +41,7 @@ public final class InstallShortcutReceiver extends BroadcastReceiver {
                 try {
                     PackageManager pm = context.getPackageManager();
                     Resources apkRes = pm.getResourcesForApplication(r.packageName);
-                    android.graphics.drawable.Drawable d = apkRes.getDrawable(apkRes.getIdentifier(r.resourceName, null, null), null);
+                    android.graphics.drawable.Drawable d = com.piko.launcher.util.Compat.drawable(apkRes, apkRes.getIdentifier(r.resourceName, null, null));
                     icon = Bitmap.createBitmap(Math.max(1, d.getIntrinsicWidth()), Math.max(1, d.getIntrinsicHeight()), Bitmap.Config.ARGB_8888);
                     android.graphics.Canvas c = new android.graphics.Canvas(icon);
                     d.setBounds(0, 0, c.getWidth(), c.getHeight());
@@ -70,7 +70,7 @@ public final class InstallShortcutReceiver extends BroadcastReceiver {
                     HomeItem item = new HomeItem();
                     item.type = HomeItem.TYPE_SHORTCUT;
                     item.kind = "intent";
-                    item.data = iconFile + "\n" + target.toUri(0);
+                    item.data = iconFile + "\n" + com.piko.launcher.util.Compat.toUri(target);
                     item.label = name == null ? "Shortcut" : name;
                     item.page = p;
                     item.col = c;

@@ -26,7 +26,7 @@ public final class HomeIconViewFactory {
         String key = item.packageName + "/" + item.activityName;
         AppCustomizationStore store = AppCustomizationStore.get(context);
         AppCustomizationStore.Entry custom = store.get(key);
-        label.setText(custom != null && custom.label != null && !custom.label.trim().isEmpty() ? custom.label : item.label);
+        label.setText(custom != null && custom.label != null && !com.piko.launcher.util.Compat.isEmpty(custom.label.trim()) ? custom.label : item.label);
         label.setVisibility(applyLabelVisibility(context, item) ? View.GONE : View.VISIBLE);
 
         int sizePx = (int) (36 * context.getResources().getDisplayMetrics().density);
@@ -75,9 +75,9 @@ public final class HomeIconViewFactory {
             if (b != null) {
                 View view = chipIcon(context, item, iconForKind(item.kind));
                 ImageView icon = view.findViewById(R.id.icon);
-                icon.setBackground(null);
+                com.piko.launcher.util.Compat.setBackground(icon, null);
                 icon.setPadding(0, 0, 0, 0);
-                icon.setImageDrawable(new android.graphics.drawable.BitmapDrawable(context.getResources(), b));
+                icon.setImageDrawable(com.piko.launcher.util.Compat.bitmapDrawable(context.getResources(), b));
                 return view;
             }
         }
@@ -86,7 +86,7 @@ public final class HomeIconViewFactory {
             if (d != null) {
                 View view = chipIcon(context, item, iconForKind("pin"));
                 ImageView icon = view.findViewById(R.id.icon);
-                icon.setBackground(null);
+                com.piko.launcher.util.Compat.setBackground(icon, null);
                 icon.setPadding(0, 0, 0, 0);
                 icon.setImageDrawable(d);
                 return view;
@@ -100,7 +100,7 @@ public final class HomeIconViewFactory {
         if (nl <= 0) return null;
         android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(
                 new java.io.File(context.getFilesDir(), data.substring(0, nl)).getPath());
-        return b == null ? null : new android.graphics.drawable.BitmapDrawable(context.getResources(), b);
+        return b == null ? null : com.piko.launcher.util.Compat.bitmapDrawable(context.getResources(), b);
     }
 
     /** The icon another app supplied for a pinned shortcut (data is "package\nid"), or null. */
@@ -116,7 +116,7 @@ public final class HomeIconViewFactory {
                             | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
                             | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST);
             java.util.List<android.content.pm.ShortcutInfo> list = apps.getShortcuts(q, android.os.Process.myUserHandle());
-            if (list == null || list.isEmpty()) return null;
+            if (list == null || com.piko.launcher.util.Compat.isEmpty(list)) return null;
             return apps.getShortcutIconDrawable(list.get(0), context.getResources().getDisplayMetrics().densityDpi);
         } catch (Exception e) {
             return null;

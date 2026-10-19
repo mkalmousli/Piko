@@ -12,7 +12,11 @@ import android.content.Context;
  * instance is shared for the process; its id is fixed so re-launches keep
  * talking to the same widget bindings.
  */
+@android.annotation.TargetApi(16)
 public final class WidgetHostController {
+
+    /** Hosting widgets needs the bind API of Android 4.1; older versions simply get no widget support. */
+    public static final boolean SUPPORTED = android.os.Build.VERSION.SDK_INT >= 16;
 
     private static final int HOST_ID = 0x504B; // "PK"
 
@@ -23,8 +27,8 @@ public final class WidgetHostController {
 
     private WidgetHostController(Context context) {
         Context app = context.getApplicationContext();
-        host = new AppWidgetHost(app, HOST_ID);
-        manager = AppWidgetManager.getInstance(app);
+        host = SUPPORTED ? new AppWidgetHost(app, HOST_ID) : null;
+        manager = SUPPORTED ? AppWidgetManager.getInstance(app) : null;
     }
 
     public static synchronized WidgetHostController get(Context context) {
@@ -41,31 +45,31 @@ public final class WidgetHostController {
     }
 
     public int allocateAppWidgetId() {
-        return host.allocateAppWidgetId();
+        return SUPPORTED ? host.allocateAppWidgetId() : -1;
     }
 
     public void deleteAppWidgetId(int appWidgetId) {
-        host.deleteAppWidgetId(appWidgetId);
+        if (SUPPORTED) host.deleteAppWidgetId(appWidgetId);
     }
 
     public AppWidgetProviderInfo infoFor(int appWidgetId) {
-        return manager.getAppWidgetInfo(appWidgetId);
+        return SUPPORTED ? manager.getAppWidgetInfo(appWidgetId) : null;
     }
 
     public AppWidgetHostView createView(Context context, int appWidgetId, AppWidgetProviderInfo info) {
-        return host.createView(context, appWidgetId, info);
+        return SUPPORTED ? host.createView(context, appWidgetId, info) : null;
     }
 
     public void startListening() {
         try {
-            host.startListening();
+            if (SUPPORTED) host.startListening();
         } catch (Exception ignored) {
         }
     }
 
     public void stopListening() {
         try {
-            host.stopListening();
+            if (SUPPORTED) host.stopListening();
         } catch (Exception ignored) {
         }
     }

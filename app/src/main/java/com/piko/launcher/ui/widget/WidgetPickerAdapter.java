@@ -19,12 +19,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /** Groups installed widget providers by owning app; each child row shows a live preview. */
+@android.annotation.TargetApi(16)
 public final class WidgetPickerAdapter extends BaseExpandableListAdapter {
 
     private final Context context;
     private List<WidgetProviderGroup> groups = new ArrayList<>();
     private final ConcurrentHashMap<String, String> labels = new ConcurrentHashMap<>();
-    private final android.util.LruCache<String, Drawable> previews = new android.util.LruCache<>(48);
+    private final com.piko.launcher.util.LruCache<String, Drawable> previews = new com.piko.launcher.util.LruCache<>(48);
     private final ExecutorService loader = Executors.newFixedThreadPool(2);
     private final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
 
@@ -38,7 +39,7 @@ public final class WidgetPickerAdapter extends BaseExpandableListAdapter {
         String l = labels.get(key);
         if (l == null) {
             try {
-                l = info.loadLabel(context.getPackageManager());
+                l = android.os.Build.VERSION.SDK_INT >= 21 ? info.loadLabel(context.getPackageManager()) : info.label;
             } catch (Exception e) {
                 l = info.provider.getShortClassName();
             }
@@ -140,17 +141,21 @@ public final class WidgetPickerAdapter extends BaseExpandableListAdapter {
     private Drawable loadPreview(AppWidgetProviderInfo info) {
         Drawable preview = null;
         try {
-            preview = info.loadPreviewImage(context, 0);
+            preview = android.os.Build.VERSION.SDK_INT >= 21 ? info.loadPreviewImage(context, 0)
+                    : (info.previewImage == 0 ? null
+                    : context.getPackageManager().getDrawable(info.provider.getPackageName(), info.previewImage, null));
         } catch (Exception ignored) {
         }
         if (preview == null) {
             try {
-                preview = info.loadIcon(context, 0);
+                preview = android.os.Build.VERSION.SDK_INT >= 21 ? info.loadIcon(context, 0)
+                        : (info.icon == 0 ? null
+                        : context.getPackageManager().getDrawable(info.provider.getPackageName(), info.icon, null));
             } catch (Exception ignored) {
             }
         }
         if (preview == null) {
-            preview = context.getDrawable(R.drawable.ic_placeholder_app);
+            preview = com.piko.launcher.util.Compat.drawable(context.getResources(), R.drawable.ic_placeholder_app);
         }
         return preview;
     }

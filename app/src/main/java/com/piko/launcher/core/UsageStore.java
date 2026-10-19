@@ -28,10 +28,10 @@ public final class UsageStore {
     }
 
     public void recordLaunch(String key) {
-        sp.edit().putInt(key, count(key) + 1).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().putInt(key, count(key) + 1));
     }
 
     public void clear(String key) {
-        sp.edit().remove(key).apply();
+        com.piko.launcher.util.Compat.apply(sp.edit().remove(key));
     }
 }

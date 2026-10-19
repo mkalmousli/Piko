@@ -65,7 +65,7 @@ public final class IconPacks {
     /** The pack's drawable for a component, or null when no pack is selected or it doesn't theme this app. */
     public synchronized Drawable iconFor(String pkg, String activity) {
         String selected = Prefs.get(context).iconPack();
-        if (selected.isEmpty()) return null;
+        if (com.piko.launcher.util.Compat.isEmpty(selected)) return null;
         if (!selected.equals(loadedPack)) load(selected);
         if (packResources == null) return null;
         String name = mapping.get(pkg + "/" + activity);
@@ -74,7 +74,7 @@ public final class IconPacks {
         int id = packResources.getIdentifier(name, "drawable", selected);
         if (id == 0) return null;
         try {
-            return packResources.getDrawable(id, null);
+            return com.piko.launcher.util.Compat.drawable(packResources, id);
         } catch (Resources.NotFoundException e) {
             return null;
         }
@@ -83,7 +83,7 @@ public final class IconPacks {
     /** Every distinct drawable name the selected pack themes, sorted; empty when no pack is selected. */
     public synchronized List<String> drawableNames() {
         String selected = Prefs.get(context).iconPack();
-        if (selected.isEmpty()) return new ArrayList<>();
+        if (com.piko.launcher.util.Compat.isEmpty(selected)) return new ArrayList<>();
         if (!selected.equals(loadedPack)) load(selected);
         List<String> names = new ArrayList<>(new java.util.TreeSet<>(mapping.values()));
         return names;
@@ -91,11 +91,11 @@ public final class IconPacks {
 
     public synchronized Drawable drawableByName(String name) {
         String selected = Prefs.get(context).iconPack();
-        if (selected.isEmpty() || packResources == null) return null;
+        if (com.piko.launcher.util.Compat.isEmpty(selected) || packResources == null) return null;
         int id = packResources.getIdentifier(name, "drawable", selected);
         if (id == 0) return null;
         try {
-            return packResources.getDrawable(id, null);
+            return com.piko.launcher.util.Compat.drawable(packResources, id);
         } catch (Resources.NotFoundException e) {
             return null;
         }

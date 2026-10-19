@@ -69,6 +69,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
+            android:layout_marginLeft="8dp"
             android:background="@null"
             android:hint="@string/search_hint"
             android:textColorHint="@color/piko_text_hint"

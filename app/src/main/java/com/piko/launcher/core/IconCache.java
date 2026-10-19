@@ -8,7 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.LruCache;
+import com.piko.launcher.util.LruCache;
 import android.widget.ImageView;
 
 import java.util.concurrent.ExecutorService;
@@ -34,7 +34,7 @@ public final class IconCache {
         memoryCache = new LruCache<String, Bitmap>(maxKb) {
             @Override
             protected int sizeOf(String key, Bitmap bitmap) {
-                return bitmap.getByteCount() / 1024;
+                return bitmap.getRowBytes() * bitmap.getHeight() / 1024;
             }
         };
     }

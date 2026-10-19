@@ -64,9 +64,9 @@ public final class SearchEnginesActivity extends Activity {
             }
 
             int index = i;
-            up.setAlpha(index > 0 ? 1f : 0.3f);
+            com.piko.launcher.util.Compat.setAlpha(up, index > 0 ? 1f : 0.3f);
             up.setOnClickListener(v -> move(order, index, index - 1));
-            down.setAlpha(index < order.size() - 1 ? 1f : 0.3f);
+            com.piko.launcher.util.Compat.setAlpha(down, index < order.size() - 1 ? 1f : 0.3f);
             down.setOnClickListener(v -> move(order, index, index + 1));
             ui.root.addView(row);
         }
@@ -92,7 +92,7 @@ public final class SearchEnginesActivity extends Activity {
         name.setHint("Name (e.g. Gemini)");
         EditText url = new EditText(this);
         url.setHint("URL, use %s for the query");
-        url.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
+        com.piko.launcher.util.Compat.setInputType(url, InputType.TYPE_TEXT_VARIATION_URI);
         box.addView(name);
         box.addView(url);
         new AlertDialog.Builder(this)
@@ -101,7 +101,7 @@ public final class SearchEnginesActivity extends Activity {
                 .setPositiveButton(android.R.string.ok, (d, w) -> {
                     String n = name.getText().toString().trim();
                     String u = url.getText().toString().trim();
-                    if (n.isEmpty() || !u.startsWith("http")) {
+                    if (com.piko.launcher.util.Compat.isEmpty(n) || !u.startsWith("http")) {
                         Toast.makeText(this, "Enter a name and an http(s) URL", Toast.LENGTH_SHORT).show();
                         return;
                     }
