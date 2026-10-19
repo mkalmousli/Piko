@@ -50,7 +50,8 @@ reach a clean, configurable icon grid. That's it.
 **Home screen**
 - Long-press an icon to lift it, then drag: a highlighted drop target shows where it lands, occupied cells swap, drag to the top strip to remove, or release without moving for the item menu.
 - Hold an icon at a screen edge to carry it to the next page (a new page is created past the last one).
-- **Free-form placement**: icons and widgets sit exactly where you drop them (switch to snap-to-grid in Settings).
+- **Free-form placement**: icons and widgets sit exactly where you drop them (switch to snap-to-grid in Settings); widgets resize freely from eight handles.
+- Page overview has a **page strip** at the bottom: swipe through pages, drag a thumbnail to reorder, long-press a widget in the picker to choose where it goes.
 - Long-press empty space to **zoom out** into page overview: add, delete, reorder pages, tidy a page onto the grid, or add apps/widgets.
 - Drag an icon to the bar at the top to remove, uninstall, open app info, edit, or toggle its name.
 - Hide app names globally or per app.
@@ -62,9 +63,16 @@ reach a clean, configurable icon grid. That's it.
 
 **Contacts**
 - Search contacts by name or **by phone number**; unknown numbers get an **Add to contacts** row.
-- Every contact action (**Call, SMS, WhatsApp message, WhatsApp call**, open, copy) is its own result row; each can be switched off.
+- Each contact is one compact result that **expands into action chips** (**Call, SMS, WhatsApp message, WhatsApp call**, open, copy); long-press copies the number. Email addresses get write / add / copy actions.
+- Few search engines collapse into a single row; calculator results keep a **history**.
 - Choose what tapping a result does; copy numbers; optional direct-call mode that skips the dialer.
 - Contacts are optional: decline the permission and everything else still works.
+
+**Shortcuts & background**
+- **Apps can add shortcuts to Piko** (Chrome's "Add to Home screen" and any app using Android's pin-shortcut request); they get the app's icon and name. Restart an app that was open before you made Piko your launcher.
+- **Edit shortcuts**: change name, target (number, address, link or search text) and icon from the drag bar or long-press menu.
+- Type a web address to get an **Open website** result you can add to home.
+- **Backgrounds**: solid colour, gradient, system wallpaper or your own image, with adjustable darkening (Settings → Background).
 
 **Quick actions & shortcuts**
 - Piko quick actions (settings, setup, overview, ...) appear in search; switch them off in setup.
