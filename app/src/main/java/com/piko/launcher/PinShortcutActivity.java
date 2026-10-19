@@ -39,7 +39,8 @@ public final class PinShortcutActivity extends Activity {
         int cols = prefs.columns(), rows = prefs.rows(), pages = Math.max(1, prefs.gridPageCount());
         int page = -1, col = 0, row = 0;
         search:
-        for (int p = 0; p < pages; p++) {
+        for (int n = 0; n < pages; n++) {
+            int p = (Math.min(prefs.defaultPage(), pages - 1) + n) % pages;
             for (int r = 0; r < rows; r++) {
                 for (int c = 0; c < cols; c++) {
                     if (cellFree(items, p, c, r)) {

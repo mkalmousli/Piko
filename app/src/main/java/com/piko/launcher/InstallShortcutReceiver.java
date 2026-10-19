@@ -62,7 +62,8 @@ public final class InstallShortcutReceiver extends BroadcastReceiver {
         HomeLayoutStore store = HomeLayoutStore.get(context);
         List<HomeItem> items = store.loadAll();
         int pages = Math.max(1, prefs.gridPageCount());
-        for (int p = 0; p < pages; p++) {
+        for (int n = 0; n < pages; n++) {
+            int p = (Math.min(prefs.defaultPage(), pages - 1) + n) % pages;
             for (int r = 0; r < prefs.rows(); r++) {
                 for (int c = 0; c < prefs.columns(); c++) {
                     if (!PinShortcutActivity.cellFree(items, p, c, r)) continue;
