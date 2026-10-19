@@ -27,7 +27,8 @@ public final class PinShortcutActivity extends Activity {
     }
 
     private void handle() {
-        LauncherApps apps = getSystemService(LauncherApps.class);
+        if (android.os.Build.VERSION.SDK_INT < 26) return;
+        LauncherApps apps = (LauncherApps) getSystemService(LAUNCHER_APPS_SERVICE);
         LauncherApps.PinItemRequest request = apps == null ? null : apps.getPinItemRequest(getIntent());
         if (request == null || request.getRequestType() != LauncherApps.PinItemRequest.REQUEST_TYPE_SHORTCUT) return;
         ShortcutInfo info = request.getShortcutInfo();

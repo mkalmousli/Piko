@@ -105,8 +105,9 @@ public final class HomeIconViewFactory {
 
     /** The icon another app supplied for a pinned shortcut (data is "package\nid"), or null. */
     private static android.graphics.drawable.Drawable pinnedIcon(Context context, String data) {
+        if (android.os.Build.VERSION.SDK_INT < 25) return null;
         try {
-            android.content.pm.LauncherApps apps = context.getSystemService(android.content.pm.LauncherApps.class);
+            android.content.pm.LauncherApps apps = (android.content.pm.LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
             int nl = data.indexOf('\n');
             android.content.pm.LauncherApps.ShortcutQuery q = new android.content.pm.LauncherApps.ShortcutQuery()
                     .setPackage(data.substring(0, nl))

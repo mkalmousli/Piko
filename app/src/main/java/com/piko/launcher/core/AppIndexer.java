@@ -87,7 +87,7 @@ public final class AppIndexer {
             AppInfo info = new AppInfo(ri.activityInfo.packageName, ri.activityInfo.name, label);
             result.add(info);
         }
-        Collections.sort(result, Comparator.comparing(a -> a.labelLower));
+        Collections.sort(result, (a, b) -> a.labelLower.compareTo(b.labelLower));
         return result;
     }
 

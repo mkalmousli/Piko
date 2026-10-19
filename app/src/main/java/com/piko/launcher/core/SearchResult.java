@@ -17,7 +17,11 @@ public final class SearchResult {
         public String badge, label;
         public int color;
         public Runnable run;
-        public java.util.function.Consumer<android.view.View> onLongPress;
+        public LongPress onLongPress;
+
+        public interface LongPress {
+            void accept(android.view.View v);
+        }
     }
 
     public java.util.List<Chip> chips;

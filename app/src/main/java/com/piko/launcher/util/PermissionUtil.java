@@ -14,14 +14,19 @@ public final class PermissionUtil {
     }
 
     public static boolean has(Context context, String permission) {
-        return context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
+        return android.os.Build.VERSION.SDK_INT < 23
+                || context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     public static void requestContacts(Activity activity) {
-        activity.requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, REQ_CONTACTS);
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            activity.requestPermissions(new String[]{Manifest.permission.READ_CONTACTS}, REQ_CONTACTS);
+        }
     }
 
     public static void requestCallPhone(Activity activity) {
-        activity.requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQ_CALL_PHONE);
+        if (android.os.Build.VERSION.SDK_INT >= 23) {
+            activity.requestPermissions(new String[]{Manifest.permission.CALL_PHONE}, REQ_CALL_PHONE);
+        }
     }
 }

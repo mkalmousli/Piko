@@ -727,7 +727,7 @@ public final class HomeGridLayout extends ViewGroup {
             lp.row = Math.max(0, Math.min(rows - lp.rowSpan, Math.round(top / (float) cellH)));
             if (callbacks != null) callbacks.onItemMoved(v, lp.col, lp.row);
             settleInto(v, fromLeft, fromTop);
-            performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
+            performHapticFeedback(android.os.Build.VERSION.SDK_INT >= 23 ? android.view.HapticFeedbackConstants.CONTEXT_CLICK : android.view.HapticFeedbackConstants.LONG_PRESS);
             return;
         }
         if (d != null && d.valid) {
@@ -750,7 +750,7 @@ public final class HomeGridLayout extends ViewGroup {
             }
         }
         settleInto(v, fromLeft, fromTop);
-        performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
+        performHapticFeedback(android.os.Build.VERSION.SDK_INT >= 23 ? android.view.HapticFeedbackConstants.CONTEXT_CLICK : android.view.HapticFeedbackConstants.LONG_PRESS);
     }
 
     private void dragEvent(MotionEvent ev) {

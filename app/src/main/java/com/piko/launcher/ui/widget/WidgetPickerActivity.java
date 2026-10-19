@@ -127,10 +127,10 @@ public final class WidgetPickerActivity extends Activity {
         }
 
         List<WidgetProviderGroup> groups = new ArrayList<>(byPackage.values());
-        Collections.sort(groups, Comparator.comparing(g -> g.appLabel.toLowerCase()));
+        Collections.sort(groups, (a, b) -> a.appLabel.toLowerCase().compareTo(b.appLabel.toLowerCase()));
         for (WidgetProviderGroup group : groups) {
-            Collections.sort(group.widgets, Comparator.comparing(
-                    (AppWidgetProviderInfo w) -> adapter.label(w).toLowerCase()));
+            Collections.sort(group.widgets, (a, b) ->
+                    adapter.label(a).toLowerCase().compareTo(adapter.label(b).toLowerCase()));
         }
         return groups;
     }

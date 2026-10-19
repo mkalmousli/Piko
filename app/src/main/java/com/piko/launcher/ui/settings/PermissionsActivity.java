@@ -62,7 +62,7 @@ public final class PermissionsActivity extends Activity {
                 startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                         Uri.fromParts("package", getPackageName(), null)));
             } else {
-                requestPermissions(new String[]{permission}, REQ);
+                if (android.os.Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{permission}, REQ);
             }
         });
         row.addView(action);

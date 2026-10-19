@@ -514,7 +514,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (h <= 0 || bottom == null) return;
         maxRootHeight = Math.max(maxRootHeight, h);
         int full = maxRootHeight;
-        android.view.WindowInsets wi = root.getRootWindowInsets();
+        android.view.WindowInsets wi = android.os.Build.VERSION.SDK_INT >= 23 ? root.getRootWindowInsets() : null;
         if (wi != null) {
             android.graphics.Point real = new android.graphics.Point();
             getWindowManager().getDefaultDisplay().getRealSize(real);
@@ -965,7 +965,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             case "pin": {
                 int nl = data.indexOf('\n');
                 try {
-                    getSystemService(android.content.pm.LauncherApps.class).startShortcut(
+                    if (android.os.Build.VERSION.SDK_INT < 25) throw new IllegalStateException();
+                    ((android.content.pm.LauncherApps) getSystemService(Context.LAUNCHER_APPS_SERVICE)).startShortcut(
                             data.substring(0, nl), data.substring(nl + 1), null, null, android.os.Process.myUserHandle());
                 } catch (Exception e) {
                     Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
@@ -1024,7 +1025,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         menu.getMenu().add(0, 2, 1, R.string.menu_app_info);
         menu.getMenu().add(0, 3, 2, R.string.menu_edit_app);
         menu.getMenu().add(0, 4, 3, R.string.menu_uninstall);
-        if (!android.appwidget.AppWidgetManager.getInstance(this)
+        if (android.os.Build.VERSION.SDK_INT >= 26 && !android.appwidget.AppWidgetManager.getInstance(this)
                 .getInstalledProvidersForPackage(app.packageName, null).isEmpty()) {
             menu.getMenu().add(0, 5, 1, R.string.menu_app_widgets);
         }
