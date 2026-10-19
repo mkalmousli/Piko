@@ -362,6 +362,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     return new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_UNINSTALL, HomeGridLayout.ACTION_INFO,
                             HomeGridLayout.ACTION_EDIT, HomeGridLayout.ACTION_NAME};
                 }
+                if (item.type == HomeItem.TYPE_SHORTCUT || item.type == HomeItem.TYPE_FOLDER) {
+                    return new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_EDIT};
+                }
                 return item.type == HomeItem.TYPE_WIDGET
                         ? new int[]{HomeGridLayout.ACTION_REMOVE, HomeGridLayout.ACTION_RESIZE}
                         : new int[]{HomeGridLayout.ACTION_REMOVE};
@@ -381,7 +384,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                         IntentUtil.openAppInfo(MainActivity.this, item.packageName);
                         break;
                     case HomeGridLayout.ACTION_EDIT:
-                        com.piko.launcher.ui.settings.AppEditActivity.start(MainActivity.this, toAppInfo(item));
+                        if (item.type == HomeItem.TYPE_SHORTCUT) editShortcut(grid, item, child);
+                        else if (item.type == HomeItem.TYPE_FOLDER) renameItem(item, child);
+                        else com.piko.launcher.ui.settings.AppEditActivity.start(MainActivity.this, toAppInfo(item));
                         break;
                     case HomeGridLayout.ACTION_RESIZE:
                         resizeWidget(grid, item, child);
