@@ -47,7 +47,9 @@ public final class HomeIconViewFactory {
             case "contact": return R.drawable.ic_info;
             case "copy": return R.drawable.ic_copy;
             case "web": return R.drawable.ic_globe;
-            case "addcontact": return R.drawable.ic_person_add;
+            case "addcontact": case "addemail": return R.drawable.ic_person_add;
+            case "email": return R.drawable.ic_mail;
+            case "copyemail": return R.drawable.ic_copy;
             default: return R.drawable.ic_bolt;
         }
     }

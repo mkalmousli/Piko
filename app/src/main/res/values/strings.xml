@@ -86,7 +86,7 @@
     <string name="ov_move_left">Left</string>
     <string name="ov_move_right">Right</string>
     <string name="ov_tidy">Tidy</string>
-    <string name="ov_add_item">Add</string>
+    <string name="ov_add_item">Add widget</string>
     <string name="ov_done">Done</string>
     <string name="menu_hide_name">Hide name</string>
     <string name="menu_show_name">Show name</string>
@@ -98,5 +98,9 @@
     <string name="new_folder">New folder</string>
     <string name="folder_default_name">Folder</string>
     <string name="folder_add_app">Add app</string>
+    <string name="act_write_email">Write email to %1$s</string>
+    <string name="act_copy_email">Copy email address</string>
+    <string name="ov_add_page_top">Add page</string>
+    <string name="ov_swipe_hint">Swipe to switch pages</string>
     <string name="act_add_contact">Add to contacts</string>
 </resources>

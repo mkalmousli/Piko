@@ -80,6 +80,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private View searchPageView;
     private LinearLayout overviewBar;
     private TextView overviewTitle;
+    private LinearLayout ovRow;
+    private View ovTidy, ovDefault, ovDelete, ovWidget, ovAddPage, ovPrev, ovNext;
     private boolean overview;
     private LinearLayout pageIndicator;
     private EditText searchInput;
@@ -517,6 +519,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
                 currentResults.add(at, SearchResult.forContact(new ContactInfo(-1, trimmed, trimmed)));
             }
+            if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && android.util.Patterns.EMAIL_ADDRESS.matcher(trimmed).matches()) {
+                int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
+                currentResults.addAll(at, emailRows(trimmed));
+            }
             if (prefs.flag(Prefs.FLAG_SEARCH_WEB)) {
                 for (String engineId : prefs.enabledSearchEngines()) {
                     com.piko.launcher.core.WebSearchEngines.Engine e = prefs.engineById(engineId);
@@ -559,6 +565,37 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     () -> IntentUtil.copyToClipboard(this, "number", c.phoneNumber)));
         }
         return out;
+    }
+
+    private List<SearchResult> emailRows(String email) {
+        List<SearchResult> rows = new ArrayList<>();
+        rows.add(SearchResult.forAction(null, getString(R.string.act_write_email, email), "", () -> writeEmail(email))
+                .withIcon(HomeIconViewFactory.iconForKind("email")).pinnable("email", email));
+        rows.add(SearchResult.forAction(null, getString(R.string.act_add_contact), email, () -> addEmailToContacts(email))
+                .withIcon(HomeIconViewFactory.iconForKind("addemail")).pinnable("addemail", email));
+        rows.add(SearchResult.forAction(null, getString(R.string.act_copy_email), email,
+                () -> IntentUtil.copyToClipboard(this, "email", email))
+                .withIcon(HomeIconViewFactory.iconForKind("copyemail")).pinnable("copyemail", email));
+        return rows;
+    }
+
+    private void writeEmail(String email) {
+        try {
+            startActivity(new Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("mailto:" + email)));
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void addEmailToContacts(String email) {
+        Intent intent = new Intent(android.provider.ContactsContract.Intents.Insert.ACTION);
+        intent.setType(android.provider.ContactsContract.RawContacts.CONTENT_TYPE);
+        intent.putExtra(android.provider.ContactsContract.Intents.Insert.EMAIL, email);
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void addToContacts(String number) {
@@ -656,6 +693,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 break;
             case "copy": IntentUtil.copyToClipboard(this, "number", data); break;
             case "addcontact": addToContacts(data); break;
+            case "email": writeEmail(data); break;
+            case "addemail": addEmailToContacts(data); break;
+            case "copyemail": IntentUtil.copyToClipboard(this, "email", data); break;
             case "web": IntentUtil.webSearch(this, data, ""); break;
             case "piko": runPikoAction(data); break;
         }
@@ -1213,28 +1253,68 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         overviewTitle.setPadding(0, 0, 0, dp(6));
         overviewBar.addView(overviewTitle);
 
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.addView(ovButton(R.drawable.ic_add, R.string.ov_add_page, v -> addPage()));
-        row.addView(ovButton(R.drawable.ic_trash, R.string.ov_delete_page, v -> deletePage()));
-        row.addView(ovButton(R.drawable.ic_left, R.string.ov_move_left, v -> movePage(-1)));
-        row.addView(ovButton(R.drawable.ic_right, R.string.ov_move_right, v -> movePage(1)));
-        row.addView(ovButton(R.drawable.ic_grid, R.string.ov_tidy, v -> tidyPage()));
-        row.addView(ovButton(R.drawable.ic_home, R.string.ov_set_default, v -> {
+        ovRow = new LinearLayout(this);
+        ovRow.setOrientation(LinearLayout.HORIZONTAL);
+        ovTidy = ovButton(R.drawable.ic_grid, R.string.ov_tidy, v -> tidyPage());
+        ovDefault = ovButton(R.drawable.ic_home, R.string.ov_set_default, v -> {
             prefs.setDefaultPage(pager.getCurrentItem());
             updateOverviewTitle();
             Toast.makeText(this, R.string.ov_default_set, Toast.LENGTH_SHORT).show();
-        }));
-        row.addView(ovButton(R.drawable.ic_add_circle, R.string.ov_add_item, v -> {
+        });
+        ovDelete = ovButton(R.drawable.ic_trash, R.string.ov_delete_page, v -> deletePage());
+        ovWidget = ovButton(R.drawable.ic_add_circle, R.string.ov_add_item, v -> {
             int g = pager.getCurrentItem() - 1;
             if (g >= 0) showAddItemMenu(gridPages.get(g), g, 0, 0);
-        }));
-        row.addView(ovButton(R.drawable.ic_check, R.string.ov_done, v -> exitOverview()));
-        overviewBar.addView(row);
+        });
+        ovRow.addView(ovTidy);
+        ovRow.addView(ovDefault);
+        ovRow.addView(ovDelete);
+        ovRow.addView(ovWidget);
+        overviewBar.addView(ovRow);
+
+        FrameLayout root = (FrameLayout) findViewById(R.id.root);
+        LinearLayout chip = new LinearLayout(this);
+        chip.setOrientation(LinearLayout.HORIZONTAL);
+        chip.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        chip.setBackgroundResource(R.drawable.bg_selected);
+        chip.setPadding(dp(14), dp(8), dp(18), dp(8));
+        ImageView plus = new ImageView(this);
+        plus.setImageResource(R.drawable.ic_add);
+        plus.setColorFilter(getResources().getColor(R.color.piko_text_primary));
+        chip.addView(plus, new LinearLayout.LayoutParams(dp(18), dp(18)));
+        TextView chipText = new TextView(this);
+        chipText.setText(R.string.ov_add_page_top);
+        chipText.setTextSize(13);
+        chipText.setPadding(dp(6), 0, 0, 0);
+        chipText.setTextColor(getResources().getColor(R.color.piko_text_primary));
+        chip.addView(chipText);
+        chip.setOnClickListener(v -> addPage());
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.TOP | android.view.Gravity.CENTER_HORIZONTAL);
+        alp.topMargin = dp(34);
+        chip.setLayoutParams(alp);
+        ovAddPage = chip;
+        ovAddPage.setVisibility(View.GONE);
+        root.addView(ovAddPage);
+
+        ovPrev = edgeHint(R.drawable.ic_left, android.view.Gravity.START);
+        ovNext = edgeHint(R.drawable.ic_right, android.view.Gravity.END);
 
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM);
         ((FrameLayout) findViewById(R.id.root)).addView(overviewBar, lp);
+    }
+
+    private View edgeHint(int iconRes, int gravity) {
+        ImageView v = new ImageView(this);
+        v.setImageResource(iconRes);
+        v.setColorFilter(getResources().getColor(R.color.piko_text_secondary));
+        v.setAlpha(0.8f);
+        v.setVisibility(View.GONE);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(28), dp(28), gravity | android.view.Gravity.CENTER_VERTICAL);
+        lp.setMargins(dp(4), 0, dp(4), dp(60));
+        ((FrameLayout) findViewById(R.id.root)).addView(v, lp);
+        return v;
     }
 
     private View ovButton(int iconRes, int label, View.OnClickListener click) {
@@ -1262,9 +1342,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void enterOverview() {
         if (overview) return;
         overview = true;
+        searchInput.clearFocus();
         hideKeyboard();
         pagerRoot.setBackgroundResource(R.drawable.bg_page_card);
-        pagerRoot.animate().scaleX(0.78f).scaleY(0.78f).translationY(-dp(14)).setDuration(240)
+        pagerRoot.animate().scaleX(0.74f).scaleY(0.74f).translationY(dp(24)).setDuration(240)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         overviewBar.setAlpha(0f);
         overviewBar.setVisibility(View.VISIBLE);
@@ -1279,13 +1360,27 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
                 .withEndAction(() -> pagerRoot.setBackground(null)).start();
         overviewBar.animate().alpha(0f).setDuration(180).withEndAction(() -> overviewBar.setVisibility(View.GONE)).start();
+        ovAddPage.setVisibility(View.GONE);
+        ovPrev.setVisibility(View.GONE);
+        ovNext.setVisibility(View.GONE);
     }
 
     private void updateOverviewTitle() {
         if (overviewTitle == null) return;
         int idx = pager.getCurrentItem();
         String name = idx == 0 ? "Search page" : "Page " + idx + " of " + gridPages.size();
-        overviewTitle.setText(idx == prefs.defaultPage() ? name + " · default" : name);
+        overviewTitle.setText((idx == prefs.defaultPage() ? name + " · default" : name) + "\n" + getString(R.string.ov_swipe_hint));
+        if (!overview) return;
+        int g = idx - 1;
+        boolean hasItems = false;
+        if (g >= 0) for (HomeItem it : homeItems) if (it.page == g) { hasItems = true; break; }
+        ovTidy.setVisibility(hasItems ? View.VISIBLE : View.GONE);
+        ovDefault.setVisibility(idx == prefs.defaultPage() ? View.GONE : View.VISIBLE);
+        ovDelete.setVisibility(g >= 0 && gridPages.size() > 1 ? View.VISIBLE : View.GONE);
+        ovWidget.setVisibility(g >= 0 ? View.VISIBLE : View.GONE);
+        ovAddPage.setVisibility(gridPages.size() < 8 ? View.VISIBLE : View.GONE);
+        ovPrev.setVisibility(idx > 0 ? View.VISIBLE : View.GONE);
+        ovNext.setVisibility(idx < gridPages.size() ? View.VISIBLE : View.GONE);
     }
 
     /** Rebuilds every grid page from {@link #homeItems} after a structural change, then focuses one. */
@@ -1547,7 +1642,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void focusSearch() {
-        if (searchInput == null) return;
+        if (searchInput == null || overview) return;
         searchInput.requestFocus();
         searchInput.post(() -> {
             InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
