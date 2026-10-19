@@ -32,6 +32,8 @@ public final class HomeGridLayout extends ViewGroup {
 
     public interface Callbacks {
         void onEmptyCellLongPress(int col, int row);
+        /** A short tap on empty space. */
+        void onEmptyTap();
         void onItemMoved(View child, int newCol, int newRow);
         void onItemRemoveRequested(View child);
         /** Action ids (ACTION_*) offered in the bar that appears at the top while an item is dragged. */
@@ -814,9 +816,14 @@ public final class HomeGridLayout extends ViewGroup {
                 trackLongPressDrift(ev);
                 break;
             case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_CANCEL: {
+                boolean tap = ev.getActionMasked() == MotionEvent.ACTION_UP && !longPressFired
+                        && Math.hypot(ev.getX() - downX, ev.getY() - downY) <= moveCancelThreshold
+                        && childAt(ev.getX(), ev.getY()) == null;
                 cancelPendingLongPress();
+                if (tap && callbacks != null) callbacks.onEmptyTap();
                 break;
+            }
         }
         return true;
     }

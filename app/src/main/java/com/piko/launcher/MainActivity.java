@@ -182,6 +182,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
         // Results are an overlay above the pager, shown only while typing; page 0 is a normal grid page.
         resultsOverlay = page.findViewById(R.id.results_overlay);
+        resultsOverlay.setOnClickListener(v -> focusSearch());
         ((ViewGroup) resultsOverlay.getParent()).removeView(resultsOverlay);
         resultsOverlay.setVisibility(View.GONE);
         FrameLayout.LayoutParams overlayLp = new FrameLayout.LayoutParams(
@@ -342,6 +343,11 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         grid.setFreeform(prefs.freeform());
         grid.setLongPressEnabled(!overview);
         grid.setCallbacks(new HomeGridLayout.Callbacks() {
+            @Override
+            public void onEmptyTap() {
+                if (!overview) focusSearch();
+            }
+
             @Override
             public void onEmptyCellLongPress(int col, int row) {
                 if (overview) showAddItemMenu(grid, pageId, col, row);
