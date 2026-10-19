@@ -43,6 +43,7 @@ public final class WidgetPickerActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_widget_picker);
+        com.piko.launcher.ui.settings.SettingsUi.installAppBar(this, getString(R.string.menu_add_widget));
 
         EditText searchInput = findViewById(R.id.widget_search_input);
         list = findViewById(R.id.widget_list);

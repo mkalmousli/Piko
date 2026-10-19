@@ -12,7 +12,7 @@ import android.widget.TextView;
 import com.piko.launcher.R;
 
 /** Tiny programmatic builder so the drill-down settings screens share one look without a layout file each. */
-final class SettingsUi {
+public final class SettingsUi {
 
     final Activity activity;
     final LinearLayout root;
@@ -26,12 +26,54 @@ final class SettingsUi {
         root.setOrientation(LinearLayout.VERTICAL);
         int pad = dp(20);
         root.setPadding(pad, dp(36), pad, dp(32));
+        root.setPadding(pad, dp(8), pad, dp(32));
         scroll.addView(root);
-
-        TextView t = text(title, 24, R.color.piko_text_primary);
-        t.setTypeface(null, android.graphics.Typeface.BOLD);
-        root.addView(t);
         activity.setContentView(scroll);
+        installAppBar(activity, title);
+    }
+
+    /** Wraps the activity's current content under a top bar with a back arrow and the screen title. */
+    public static void installAppBar(Activity activity, String title) {
+        android.view.ViewGroup content = activity.findViewById(android.R.id.content);
+        if (content.getChildCount() == 0) return;
+        View body = content.getChildAt(0);
+        content.removeView(body);
+        float d = activity.getResources().getDisplayMetrics().density;
+
+        LinearLayout column = new LinearLayout(activity);
+        column.setOrientation(LinearLayout.VERTICAL);
+        column.setBackgroundColor(activity.getResources().getColor(R.color.piko_bg));
+
+        LinearLayout bar = new LinearLayout(activity);
+        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setPadding(0, (int) (24 * d), (int) (16 * d), 0);
+        bar.setElevation(4 * d);
+        bar.setBackgroundColor(activity.getResources().getColor(R.color.piko_bg));
+
+        TextView back = new TextView(activity);
+        back.setText("←");
+        back.setTextSize(24);
+        back.setGravity(Gravity.CENTER);
+        back.setTextColor(activity.getResources().getColor(R.color.piko_text_primary));
+        back.setBackgroundResource(R.drawable.bg_pressable);
+        back.setContentDescription("Back");
+        back.setOnClickListener(v -> activity.onBackPressed());
+        bar.addView(back, new LinearLayout.LayoutParams((int) (56 * d), (int) (56 * d)));
+
+        TextView t = new TextView(activity);
+        t.setText(title);
+        t.setTextSize(20);
+        t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setTextColor(activity.getResources().getColor(R.color.piko_text_primary));
+        t.setSingleLine(true);
+        bar.addView(t, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+        column.addView(bar, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        column.addView(body, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+        content.addView(column, new android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     int dp(int v) {

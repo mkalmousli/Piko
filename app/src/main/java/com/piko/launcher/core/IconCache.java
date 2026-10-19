@@ -45,7 +45,7 @@ public final class IconCache {
     }
 
     public void load(AppInfo app, ImageView target, int sizePx) {
-        String key = app.key() + "@" + sizePx + (app.customIconPath != null ? "#" + app.customIconPath : "");
+        String key = app.key() + "@" + sizePx + "~" + Prefs.get(appContext).iconPack() + (app.customIconPath != null ? "#" + app.customIconPath : "");
         target.setTag(key);
 
         Bitmap cached = memoryCache.get(key);
@@ -77,6 +77,8 @@ public final class IconCache {
             if (custom != null) return custom;
         }
         try {
+            Drawable packed = IconPacks.get(appContext).iconFor(app.packageName, app.activityName);
+            if (packed != null) return toBitmap(packed, sizePx);
             PackageManager pm = appContext.getPackageManager();
             Drawable drawable = pm.getActivityIcon(new android.content.ComponentName(app.packageName, app.activityName));
             return toBitmap(drawable, sizePx);

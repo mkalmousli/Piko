@@ -16,7 +16,8 @@ public final class MathEval {
         if (query == null) return false;
         String q = query.trim();
         if (q.isEmpty() || !q.matches("[0-9+\\-*/().\\s]+")) return false;
-        return q.matches(".*[0-9].*") && q.matches(".*[+\\-*/].*");
+        // A bare number counts too, so typing digits always shows the calculator row.
+        return q.matches(".*[0-9].*");
     }
 
     public static Double evaluate(String expression) {

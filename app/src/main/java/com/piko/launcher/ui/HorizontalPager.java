@@ -6,6 +6,7 @@ import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Scroller;
 
 /**
@@ -30,10 +31,11 @@ public final class HorizontalPager extends ViewGroup {
     private float downX, downY, lastX;
     private boolean dragging = false;
     private OnPageChangeListener listener;
+    private boolean tilt3d = true;
 
     public HorizontalPager(Context context) {
         super(context);
-        scroller = new Scroller(context);
+        scroller = new Scroller(context, new DecelerateInterpolator(1.6f));
         ViewConfiguration vc = ViewConfiguration.get(context);
         touchSlop = vc.getScaledTouchSlop();
         minFlingVelocity = vc.getScaledMinimumFlingVelocity();
@@ -57,7 +59,7 @@ public final class HorizontalPager extends ViewGroup {
             return;
         }
         if (smooth) {
-            scroller.startScroll(getScrollX(), 0, targetX - getScrollX(), 0, 350);
+            scroller.startScroll(getScrollX(), 0, targetX - getScrollX(), 0, 320);
             postInvalidateOnAnimation();
         } else {
             scrollTo(targetX, 0);
@@ -65,6 +67,30 @@ public final class HorizontalPager extends ViewGroup {
         if (currentItem != index) {
             currentItem = index;
             if (listener != null) listener.onPageSelected(currentItem);
+        }
+    }
+
+    /** Pages swing like a door hinged on the page edge as they slide, giving the swipe real depth. */
+    @Override
+    protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+        super.onScrollChanged(l, t, oldl, oldt);
+        int width = getWidth();
+        if (width == 0) return;
+        float density = getResources().getDisplayMetrics().density;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            float offset = (i * width - l) / (float) width;
+            if (!tilt3d || Math.abs(offset) >= 1f || offset == 0f) {
+                child.setRotationY(0f);
+                child.setAlpha(1f);
+                child.setTranslationX(0f);
+                continue;
+            }
+            child.setCameraDistance(10000 * density);
+            child.setPivotX(offset > 0 ? 0f : width);
+            child.setPivotY(getHeight() / 2f);
+            child.setRotationY(-offset * 28f);
+            child.setAlpha(1f - Math.abs(offset) * 0.35f);
         }
     }
 
@@ -108,6 +134,7 @@ public final class HorizontalPager extends ViewGroup {
                 if (Math.abs(dx) > touchSlop && Math.abs(dx) > Math.abs(dy)) {
                     dragging = true;
                     lastX = ev.getX();
+                    if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
                     return true;
                 }
                 return false;
@@ -132,6 +159,9 @@ public final class HorizontalPager extends ViewGroup {
                 if (dragging) {
                     float delta = lastX - ev.getX();
                     lastX = ev.getX();
+                    int max = (getChildCount() - 1) * getWidth();
+                    int sx = getScrollX();
+                    if (sx < 0 || sx > max) delta *= 0.35f;  // rubber-band past the first/last page
                     scrollBy((int) delta, 0);
                 }
                 return true;

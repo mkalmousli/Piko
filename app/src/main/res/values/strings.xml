@@ -65,5 +65,6 @@
     <string name="uninstall_failed">Couldn\'t open the uninstall screen for this app</string>
     <string name="settings_search">Search</string>
     <string name="settings_search_open">Search settings ›</string>
+    <string name="drop_to_remove">Drop here to remove</string>
     <string name="resize_hint">Drag the corner handle to resize, tap outside to finish</string>
 </resources>

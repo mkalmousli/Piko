@@ -33,6 +33,7 @@ public final class Prefs {
     private static final String KEY_SEARCH_ENGINE_ORDER = "web_search_engine_order_v2";
 
     private static final String KEY_CUSTOM_ENGINES = "custom_search_engines";
+    private static final String KEY_ICON_PACK = "icon_pack";
     private static final String KEY_HIDDEN_APPS = "hidden_apps";
     private static final String KEY_CONTACT_TAP = "contact_tap_action";
 
@@ -97,6 +98,15 @@ public final class Prefs {
     /** Bumped whenever a change forces MainActivity to rebuild its grid pages (columns, rows, page count, layout reset). */
     public int layoutRevision() {
         return sp.getInt(KEY_LAYOUT_REVISION, 0);
+    }
+
+    /** Package name of the selected icon pack, or "" for the system icons. */
+    public String iconPack() {
+        return sp.getString(KEY_ICON_PACK, "");
+    }
+
+    public void setIconPack(String pkg) {
+        sp.edit().putString(KEY_ICON_PACK, pkg == null ? "" : pkg).apply();
     }
 
     public void bumpLayoutRevision() {

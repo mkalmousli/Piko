@@ -64,6 +64,7 @@ public final class AppEditActivity extends Activity {
         pendingIconPath = existing != null ? existing.iconPath : null;
 
         setContentView(buildView(existing));
+        SettingsUi.installAppBar(this, getString(R.string.menu_edit_app));
     }
 
     private View buildView(AppCustomizationStore.Entry existing) {

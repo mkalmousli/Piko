@@ -37,11 +37,20 @@ reach a clean, configurable icon grid. That's it.
 **Search-first home**
 - Opens straight into search; remembers which result you pick for a query and ranks launch frequency, so results improve with use.
 - Multi-word matching with highlighted matches; search by custom **tags** (e.g. `photos` finds your camera).
-- **Hidden apps**: keep apps out of results without uninstalling them.
+- **Hidden apps**: keep apps out of results without uninstalling them; the picker has a live filter.
+- **Icon packs**: choose any installed ADW/Nova/Apex icon pack.
+- **Permissions screen** that explains each permission and lets you grant it. Nothing is required.
+- **Phone numbers**: typing digits matches contacts by number and offers call/message for numbers not in your address book.
 
 **Instant answers**
-- **Calculator** inline: `12*8+4` → `100`.
+- **Calculator** inline: `12*8+4` → `100`; any number you type gets a calculator row.
 - **Currency conversion** inline: `100 usd to eur` (live ECB rates via [Frankfurter](https://www.frankfurter.app)).
+
+**Home screen**
+- Long-press an icon to lift it, then drag: a highlighted drop target shows where it lands, occupied cells swap, drag to the top strip to remove, or release without moving for the item menu.
+- Hold an icon at a screen edge to carry it to the next page (a new page is created past the last one).
+- Long-press an empty cell to add an app or widget.
+- 3D page swing between pages, rubber-band overscroll and haptic feedback.
 
 **Web & AI in one tap**
 - "Search the web" row with a button per engine: Google, Brave, DuckDuckGo, Bing, ChatGPT, Claude, Perplexity.

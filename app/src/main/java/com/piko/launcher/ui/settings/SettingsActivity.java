@@ -49,6 +49,7 @@ public final class SettingsActivity extends Activity {
         prefs = Prefs.get(this);
         shortcutStore = ShortcutStore.get(this);
         setContentView(R.layout.activity_settings);
+        SettingsUi.installAppBar(this, getString(R.string.settings_title));
 
         textColumns = findViewById(R.id.text_columns);
         textRows = findViewById(R.id.text_rows);
@@ -84,8 +85,25 @@ public final class SettingsActivity extends Activity {
         findViewById(R.id.btn_search_settings).setOnClickListener(v ->
                 startActivity(new Intent(this, SearchSettingsActivity.class)));
 
+        android.view.ViewGroup searchParent = (android.view.ViewGroup) findViewById(R.id.btn_search_settings).getParent();
+        int at = searchParent.indexOfChild(findViewById(R.id.btn_search_settings)) + 1;
+        searchParent.addView(navRow("Icon pack  ›", IconPackActivity.class), at);
+        searchParent.addView(navRow("Permissions  ›", PermissionsActivity.class), at + 1);
+
         findViewById(R.id.btn_reset_layout).setOnClickListener(v -> confirmResetLayout());
         findViewById(R.id.btn_add_shortcut).setOnClickListener(v -> startAddShortcut());
+    }
+
+    private TextView navRow(String label, Class<?> target) {
+        TextView t = new TextView(this);
+        t.setText(label);
+        t.setTextSize(15);
+        t.setTextColor(getResources().getColor(R.color.piko_text_primary));
+        t.setBackgroundResource(R.drawable.bg_pressable);
+        int pad = (int) (12 * getResources().getDisplayMetrics().density);
+        t.setPadding(pad, pad, pad, pad);
+        t.setOnClickListener(v -> startActivity(new Intent(this, target)));
+        return t;
     }
 
     @Override

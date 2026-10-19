@@ -20,6 +20,7 @@ public final class ShortcutPickerActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_shortcut_picker);
+        SettingsUi.installAppBar(this, getString(R.string.menu_add_app));
 
         String name = getIntent().getStringExtra(EXTRA_NAME);
         String number = getIntent().getStringExtra(EXTRA_NUMBER);

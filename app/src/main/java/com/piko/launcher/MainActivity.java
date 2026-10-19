@@ -126,7 +126,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             ContactIndexer.get(this).loadAsync();
         } else if (!prefs.contactsPermissionAsked()) {
             prefs.setContactsPermissionAsked(true);
-            PermissionUtil.requestContacts(this);
+            new AlertDialog.Builder(this)
+                    .setTitle("Search your contacts?")
+                    .setMessage("Piko can show contacts in search and let you call or message them. Contacts stay on your device. You can change this later in Settings › Permissions.")
+                    .setPositiveButton("Allow", (d, w) -> PermissionUtil.requestContacts(this))
+                    .setNegativeButton("Not now", null)
+                    .show();
         }
     }
 
@@ -297,7 +302,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         grid.setCallbacks(new HomeGridLayout.Callbacks() {
             @Override
             public void onEmptyCellLongPress(int col, int row) {
-                // Adding items lives in the search bar's "more" menu; long-press only opens item menus.
+                showAddItemMenu(grid, pageId, col, row);
             }
 
             @Override
@@ -315,8 +320,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             }
 
             @Override
-            public void onItemDragToPage(View child, int direction) {
-                moveItemToAdjacentPage(grid, child, direction);
+            public HomeGridLayout onItemDragToPage(View child, int direction) {
+                return moveItemToAdjacentPage(grid, child, direction);
             }
 
             @Override
@@ -415,12 +420,27 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     currentResults.add(0, SearchResult.forCalc(trimmed, com.piko.launcher.core.MathEval.format(value)));
                 }
             }
-            if (prefs.flag(Prefs.FLAG_SEARCH_WEB) && (currentResults.isEmpty() || (currentResults.size() == 1 && currentResults.get(0).type == SearchResult.TYPE_CALC))) {
+            if (prefs.flag(Prefs.FLAG_SEARCH_CONTACTS) && trimmed.matches("\\+?[0-9][0-9\\s\\-().]*")
+                    && trimmed.replaceAll("[^0-9]", "").length() >= 3 && !hasContactWithNumber(trimmed)) {
+                // Not in the address book: still offer call/message for the typed number.
+                int at = !currentResults.isEmpty() && currentResults.get(0).type == SearchResult.TYPE_CALC ? 1 : 0;
+                currentResults.add(at, SearchResult.forContact(new ContactInfo(-1, trimmed, trimmed)));
+            }
+            if (prefs.flag(Prefs.FLAG_SEARCH_WEB)) {
                 currentResults.add(SearchResult.forWeb(trimmed));
             }
         }
 
         renderResults(idle);
+    }
+
+    private boolean hasContactWithNumber(String typed) {
+        String digits = typed.replaceAll("[^0-9]", "");
+        for (SearchResult r : currentResults) {
+            if (r.type == SearchResult.TYPE_CONTACT
+                    && r.contact.phoneNumber.replaceAll("[^0-9]", "").endsWith(digits)) return true;
+        }
+        return false;
     }
 
     private void renderResults(boolean idle) {
@@ -777,10 +797,21 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     /** Drag-to-edge page move: keeps the cell if free on the neighbouring page, else the first free area. */
-    private void moveItemToAdjacentPage(HomeGridLayout source, View child, int direction) {
+    private HomeGridLayout moveItemToAdjacentPage(HomeGridLayout source, View child, int direction) {
         HomeItem item = (HomeItem) child.getTag();
         int targetIdx = item.page + 1 + direction;
-        if (targetIdx < 0 || targetIdx > gridPages.size()) return;
+        if (targetIdx < 0) return null;
+        if (targetIdx > gridPages.size()) {
+            // Dragged past the last page: grow a fresh one on the fly (up to a sane limit).
+            if (gridPages.size() >= 8) return null;
+            HomeGridLayout fresh = createGrid(gridPages.size(), prefs.columns(), prefs.rows());
+            gridPages.add(fresh);
+            pager.addView(fresh);
+            prefs.setGridPageCount(gridPages.size());
+            builtLayoutRevision = prefs.layoutRevision();
+            buildPageIndicator(1 + gridPages.size());
+            updatePageIndicator(pager.getCurrentItem());
+        }
         int targetPage = targetIdx - 1;
         HomeGridLayout target = gridForPage(targetPage);
         int[] cell = target.isAreaFree(item.col, item.row, item.colSpan, item.rowSpan, null)
@@ -788,7 +819,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 : findFreeArea(target, item.colSpan, item.rowSpan);
         if (cell == null) {
             Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
-            return;
+            return null;
         }
         source.removeView(child);
         item.page = targetPage;
@@ -797,6 +828,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         layoutStore.saveAll(homeItems);
         target.addView(child, target.gridParams(item.col, item.row, item.colSpan, item.rowSpan));
         pager.setCurrentItem(targetIdx, true);
+        return target;
     }
 
     private void resizeWidget(HomeGridLayout grid, HomeItem item, View child) {

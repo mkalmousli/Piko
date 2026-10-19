@@ -23,7 +23,7 @@ public final class HomeIconViewFactory {
         TextView label = view.findViewById(R.id.label);
         label.setText(item.label);
 
-        int sizePx = (int) (40 * context.getResources().getDisplayMetrics().density);
+        int sizePx = (int) (36 * context.getResources().getDisplayMetrics().density);
         AppInfo synthetic = new AppInfo(item.packageName, item.activityName, item.label);
         IconCache.get(context).load(synthetic, icon, sizePx);
 
