@@ -69,6 +69,22 @@ public final class Prefs {
         sp.edit().putInt(KEY_ROWS, value).apply();
     }
 
+    public static final int BG_DEFAULT = 0, BG_COLOR = 1, BG_GRADIENT = 2, BG_WALLPAPER = 3, BG_IMAGE = 4;
+
+    public int bgMode() { return sp.getInt("bg_mode", BG_DEFAULT); }
+    public int bgColor1() { return sp.getInt("bg_color1", 0xFF0E1015); }
+    public int bgColor2() { return sp.getInt("bg_color2", 0xFF2A3A7A); }
+    /** Gradient direction: 0 top-bottom, 1 diagonal, 2 left-right, 3 reverse diagonal. */
+    public int bgAngle() { return sp.getInt("bg_angle", 0); }
+    public String bgImage() { return sp.getString("bg_image", null); }
+    /** Darkening over the background, 0-70 (percent). */
+    public int bgDim() { return sp.getInt("bg_dim", 0); }
+
+    public void setBackground(int mode, int c1, int c2, int angle, String image, int dim) {
+        sp.edit().putInt("bg_mode", mode).putInt("bg_color1", c1).putInt("bg_color2", c2)
+                .putInt("bg_angle", angle).putString("bg_image", image).putInt("bg_dim", dim).apply();
+    }
+
     public int defaultPage() {
         return sp.getInt(KEY_DEFAULT_PAGE, 0);
     }

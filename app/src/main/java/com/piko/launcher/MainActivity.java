@@ -110,6 +110,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         widgetHostController = WidgetHostController.get(this);
 
         setContentView(R.layout.activity_main);
+        com.piko.launcher.core.Background.apply(this, findViewById(R.id.root), Prefs.get(this));
         builtLayoutRevision = prefs.layoutRevision();
         buildPages();
 

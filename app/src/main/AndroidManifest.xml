@@ -136,6 +136,9 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.settings.BackgroundActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.settings.IconPackActivity"
             android:exported="false" />
         <activity

@@ -43,6 +43,7 @@ public final class SettingsActivity extends Activity {
             prefs.setHideAllLabels(on);
             prefs.bumpLayoutRevision();
         });
+        ui.nav("Background", null, v -> startActivity(new Intent(this, BackgroundActivity.class)));
         ui.nav("Icon pack", null, v -> startActivity(new Intent(this, IconPackActivity.class)));
 
         ui.section("Behaviour");
