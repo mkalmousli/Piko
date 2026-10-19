@@ -35,6 +35,8 @@ public final class WidgetPickerActivity extends Activity {
     public static final String EXTRA_PROVIDER = "extra_provider";
     /** Optional: show only the widgets of this package. */
     public static final String EXTRA_PACKAGE = "extra_package";
+    /** Set on the result when the widget was long-pressed: the caller lets the user pick its position. */
+    public static final String EXTRA_CHOOSE_PLACE = "extra_choose_place";
 
     private ExpandableListView list;
     private WidgetPickerAdapter adapter;
@@ -57,6 +59,22 @@ public final class WidgetPickerActivity extends Activity {
             AppWidgetProviderInfo info = adapter.getChild(groupPosition, childPosition);
             Intent result = new Intent();
             result.putExtra(EXTRA_PROVIDER, info.provider);
+            setResult(RESULT_OK, result);
+            finish();
+            return true;
+        });
+
+        list.setOnItemLongClickListener((parent, v, position, id) -> {
+            long packed = list.getExpandableListPosition(position);
+            if (android.widget.ExpandableListView.getPackedPositionType(packed) != android.widget.ExpandableListView.PACKED_POSITION_TYPE_CHILD) {
+                return false;
+            }
+            AppWidgetProviderInfo info = adapter.getChild(
+                    android.widget.ExpandableListView.getPackedPositionGroup(packed),
+                    android.widget.ExpandableListView.getPackedPositionChild(packed));
+            Intent result = new Intent();
+            result.putExtra(EXTRA_PROVIDER, info.provider);
+            result.putExtra(EXTRA_CHOOSE_PLACE, true);
             setResult(RESULT_OK, result);
             finish();
             return true;

@@ -66,6 +66,7 @@
     <string name="settings_search">Search</string>
     <string name="settings_search_open">Search settings ›</string>
     <string name="drop_to_remove">Drop here to remove</string>
+    <string name="place_hint">Tap where the widget should go</string>
     <string name="resize_hint">Drag the corner handle to resize, tap outside to finish</string>
     <string name="search_engine_for">Search %1$s</string>
     <string name="act_call">Call %1$s</string>

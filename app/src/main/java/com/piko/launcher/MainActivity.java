@@ -1002,6 +1002,33 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         menu.show();
     }
 
+    private boolean pendingWidgetChoose;
+    private int placingWidgetId = -1;
+    private float pendingCenterX = -1f, pendingCenterY = -1f;
+
+    private void cancelPlacing() {
+        if (placingWidgetId < 0) return;
+        widgetHostController.deleteAppWidgetId(placingWidgetId);
+        placingWidgetId = -1;
+    }
+
+    /** Overview tap while a widget waits for a spot: place it centred on the tapped point. */
+    private boolean placeWidgetAtTap(float rawX, float rawY) {
+        HomeGridLayout grid = gridForPage(pager.getCurrentItem());
+        int[] loc = new int[2];
+        grid.getLocationOnScreen(loc);
+        float scale = grid.getWidth() > 0 ? grid.getWidth() * pagerRoot.getScaleX() : 1f;
+        float fx = (rawX - loc[0]) / scale, fy = (rawY - loc[1]) / (grid.getHeight() * pagerRoot.getScaleY());
+        if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return false;
+        int id = placingWidgetId;
+        placingWidgetId = -1;
+        pendingWidgetPage = pager.getCurrentItem();
+        pendingCenterX = fx * grid.getColumns();
+        pendingCenterY = fy * grid.getRows();
+        placeWidget(id);
+        return true;
+    }
+
     private void startWidgetPicker(int pageIndex, int col, int row, String onlyPackage) {
         pendingWidgetPage = pageIndex;
         pendingWidgetCol = col;
@@ -1128,6 +1155,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (resultCode != RESULT_OK || data == null) return;
             ComponentName provider = data.getParcelableExtra(WidgetPickerActivity.EXTRA_PROVIDER);
             if (provider == null) return;
+            pendingWidgetChoose = data.getBooleanExtra(WidgetPickerActivity.EXTRA_CHOOSE_PLACE, false);
             startWidgetBind(provider);
         } else if (requestCode == REQ_BIND_WIDGET) {
             if (resultCode == RESULT_OK) {
@@ -1188,6 +1216,13 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             widgetHostController.deleteAppWidgetId(widgetId);
             return;
         }
+        if (pendingWidgetChoose) {
+            pendingWidgetChoose = false;
+            placingWidgetId = widgetId;
+            enterOverview();
+            Toast.makeText(this, R.string.place_hint, Toast.LENGTH_LONG).show();
+            return;
+        }
         HomeGridLayout grid = gridForPage(pendingWidgetPage);
         int cellSize = grid.getCellSize() > 0 ? grid.getCellSize() : 1;
         // AppWidgetProviderInfo.minWidth/minHeight are in dp; cellSize is in px.
@@ -1199,6 +1234,11 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
         int col = pendingWidgetCol;
         int row = pendingWidgetRow;
+        if (pendingCenterX >= 0) {
+            col = Math.max(0, Math.min(grid.getColumns() - colSpan, Math.round(pendingCenterX - colSpan / 2f)));
+            row = Math.max(0, Math.min(grid.getRows() - rowSpan, Math.round(pendingCenterY - rowSpan / 2f)));
+            pendingCenterX = pendingCenterY = -1f;
+        }
         if (!grid.isAreaFree(col, row, colSpan, rowSpan, null)) {
             int[] free = findFreeArea(grid, colSpan, rowSpan);
             if (free == null) {
@@ -1508,7 +1548,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ovStrip.setGravity(android.view.Gravity.CENTER_VERTICAL);
         ovStrip.setPadding(dp(8), dp(2), dp(8), dp(8));
         ovStripScroll.addView(ovStrip);
-        overviewTop.addView(ovStripScroll);
+        overviewBar.addView(ovStripScroll);
         ovRow.addView(ovTidy);
         ovRow.addView(ovDefault);
         ovRow.addView(ovDelete);
@@ -1696,6 +1736,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     if (ovTap && Math.hypot(ev.getRawX() - ovDownX, ev.getRawY() - ovDownY) > dp(10)) ovTap = false;
                     break;
                 case MotionEvent.ACTION_UP:
+                    if (ovTap && placingWidgetId >= 0 && ev.getEventTime() - ev.getDownTime() < 400) {
+                        ovTap = false;
+                        if (placeWidgetAtTap(ev.getRawX(), ev.getRawY())) return true;
+                    }
                     if (ovTap && ev.getEventTime() - ev.getDownTime() < 400) {
                         ovTap = false;
                         MotionEvent c = MotionEvent.obtain(ev);
@@ -1745,6 +1789,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void exitOverview() {
         if (!overview) return;
         overview = false;
+        cancelPlacing();
         pager.setSwipeEnabled(true);
         for (HomeGridLayout g : gridPages) g.setLongPressEnabled(true);
         pagerRoot.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(220)
@@ -2027,6 +2072,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         super.onPause();
         widgetHostController.stopListening();
         for (HomeGridLayout g : gridPages) g.stopResize();
+        cancelPlacing();
         if (searchInput != null && !isChangingConfigurations()) searchInput.setText("");
     }
 
