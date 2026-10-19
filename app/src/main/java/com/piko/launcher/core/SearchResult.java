@@ -9,6 +9,30 @@ public final class SearchResult {
     public static final int TYPE_WEB = 3;
     /** One tappable action (call, message, one web engine…) shown as its own row. */
     public static final int TYPE_ACTION = 4;
+    /** A strip of compact action buttons belonging to the group header above it. */
+    public static final int TYPE_CHIPS = 5;
+
+    public static final class Chip {
+        public int icon;
+        public String badge, label;
+        public int color;
+        public Runnable run;
+        public java.util.function.Consumer<android.view.View> onLongPress;
+    }
+
+    public java.util.List<Chip> chips;
+    public String chipLabel;
+
+    public SearchResult chipLabel(String label) {
+        chipLabel = label;
+        return this;
+    }
+
+    public static SearchResult forChips(java.util.List<Chip> chips) {
+        SearchResult r = new SearchResult(TYPE_CHIPS, null, null);
+        r.chips = chips;
+        return r;
+    }
 
     public final int type;
     public final AppInfo app;

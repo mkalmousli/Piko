@@ -529,15 +529,26 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void buildPageIndicator(int totalPages) {
         pageIndicator.removeAllViews();
-        pageIndicator.setVisibility(totalPages > 1 ? View.VISIBLE : View.INVISIBLE);
-        int dotSize = (int) (7 * getResources().getDisplayMetrics().density);
-        int margin = (int) (4 * getResources().getDisplayMetrics().density);
+        pageIndicator.setVisibility(totalPages > 1 && resultsOverlay.getVisibility() != View.VISIBLE ? View.VISIBLE : View.INVISIBLE);
+        float d = getResources().getDisplayMetrics().density;
+        int dotSize = (int) (7 * d);
+        int margin = (int) (4 * d);
+        int home = defaultIndex();
         for (int i = 0; i < totalPages; i++) {
-            View dot = new View(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dotSize, dotSize);
+            View dot;
+            LinearLayout.LayoutParams lp;
+            if (i == home) {
+                android.widget.ImageView h = new android.widget.ImageView(this);
+                h.setImageResource(R.drawable.ic_home);
+                dot = h;
+                lp = new LinearLayout.LayoutParams((int) (14 * d), (int) (14 * d));
+            } else {
+                dot = new View(this);
+                dot.setBackgroundResource(R.drawable.bg_dot_indicator);
+                lp = new LinearLayout.LayoutParams(dotSize, dotSize);
+            }
             lp.setMargins(margin, 0, margin, 0);
             dot.setLayoutParams(lp);
-            dot.setBackgroundResource(R.drawable.bg_dot_indicator);
             pageIndicator.addView(dot);
         }
     }
@@ -547,9 +558,19 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     }
 
     private void updatePageIndicator(int index) {
+        int home = defaultIndex();
         for (int i = 0; i < pageIndicator.getChildCount(); i++) {
-            pageIndicator.getChildAt(i).setBackgroundResource(
-                    i == index ? R.drawable.bg_dot_indicator_active : R.drawable.bg_dot_indicator);
+            View c = pageIndicator.getChildAt(i);
+            if ((i == home) != (c instanceof android.widget.ImageView)) {
+                buildPageIndicator(pageIndicator.getChildCount());
+                updatePageIndicator(index);
+                return;
+            }
+            if (c instanceof android.widget.ImageView) {
+                ((android.widget.ImageView) c).setColorFilter(i == index ? 0xFF7C9CFF : 0xFF6B7080);
+            } else {
+                c.setBackgroundResource(i == index ? R.drawable.bg_dot_indicator_active : R.drawable.bg_dot_indicator);
+            }
         }
     }
 
@@ -619,7 +640,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 for (String engineId : prefs.enabledSearchEngines()) {
                     com.piko.launcher.core.WebSearchEngines.Engine e = prefs.engineById(engineId);
                     SearchResult row = SearchResult.forAction(e.label.substring(0, 1), getString(R.string.search_engine_for, e.label),
-                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)).pinnable("web", engineId);
+                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)).pinnable("web", engineId)
+                            .chipLabel(e.label);
                     if (first) currentResults.add(row);
                     else more.add(row);
                     first = false;
@@ -635,7 +657,37 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         renderResults(idle);
     }
 
-    /** One header row that toggles its children open/closed (children listed right after it). */
+    private static int chipColor(String kind) {
+        switch (kind == null ? "" : kind) {
+            case "call": return 0xFF2E9F64;
+            case "sms": return 0xFF4A7BE0;
+            case "wa": return 0xFF1FA855;
+            case "wacall": return 0xFF138A7A;
+            case "contact": return 0xFF6B7690;
+            case "copy": case "copyemail": return 0xFFC98A1E;
+            case "email": return 0xFFD2574B;
+            case "addcontact": case "addemail": return 0xFF8A5CD6;
+            case "web": return 0xFF5B6FD6;
+            default: return 0xFF6B7690;
+        }
+    }
+
+    private static String chipText(SearchResult k) {
+        if (k.chipLabel != null) return k.chipLabel;
+        switch (k.shortcutKind == null ? "" : k.shortcutKind) {
+            case "call": return "Call";
+            case "sms": return "SMS";
+            case "wa": return "WhatsApp";
+            case "wacall": return "WA call";
+            case "contact": return "Open";
+            case "addcontact": case "addemail": return "Add";
+            case "copy": case "copyemail": return "Copy";
+            case "email": return "Write";
+            default: return k.text;
+        }
+    }
+
+    /** A header row that toggles a strip of compact action buttons shown right after it. */
     private List<SearchResult> group(String key, String title, String sub, int icon, String copy, List<SearchResult> kids) {
         boolean open = expandedContacts.contains(key);
         List<SearchResult> rows = new ArrayList<>();
@@ -643,8 +695,36 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (!expandedContacts.remove(key)) expandedContacts.add(key);
             filterAndShow(searchInput.getText().toString());
         }).withIcon(icon).grouped(open ? SearchResult.GROUP_OPEN : SearchResult.GROUP_HEADER).copyOnLongPress(copy));
-        if (open) for (SearchResult k : kids) rows.add(k.grouped(SearchResult.GROUP_CHILD));
+        if (open) {
+            List<SearchResult.Chip> chips = new ArrayList<>();
+            for (SearchResult k : kids) {
+                SearchResult.Chip c = new SearchResult.Chip();
+                c.icon = k.icon;
+                c.badge = k.badge;
+                c.label = chipText(k);
+                c.color = chipColor(k.shortcutKind);
+                c.run = k.action;
+                if (k.shortcutKind != null) c.onLongPress = v -> showAddToHome(v, k);
+                chips.add(c);
+            }
+            rows.add(SearchResult.forChips(chips));
+        }
         return rows;
+    }
+
+    private void showAddToHome(View anchor, SearchResult result) {
+        PopupMenu menu = new PopupMenu(this, anchor);
+        menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
+        menu.setOnMenuItemClickListener(m -> {
+            HomeItem item = new HomeItem();
+            item.type = HomeItem.TYPE_SHORTCUT;
+            item.kind = result.shortcutKind;
+            item.data = result.shortcutData;
+            item.label = result.text;
+            placeOnHome(item);
+            return true;
+        });
+        menu.show();
     }
 
     private final java.util.Set<String> expandedContacts = new java.util.HashSet<>();
@@ -842,6 +922,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
         boolean hasResults = !currentResults.isEmpty();
         resultsOverlay.setVisibility(idle ? View.GONE : View.VISIBLE);
+        pageIndicator.setVisibility(idle && gridPages.size() > 1 ? View.VISIBLE : View.INVISIBLE);
         resultsList.setVisibility(hasResults ? View.VISIBLE : View.GONE);
         emptyText.setVisibility(!hasResults ? View.VISIBLE : View.GONE);
     }

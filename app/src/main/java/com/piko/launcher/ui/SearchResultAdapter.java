@@ -79,7 +79,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     @Override
     public int getViewTypeCount() {
-        return 5;
+        return 6;
     }
 
     @Override
@@ -90,7 +90,7 @@ public final class SearchResultAdapter extends BaseAdapter {
     @Override
     public boolean isEnabled(int position) {
         int type = items.get(position).type;
-        return type != SearchResult.TYPE_CONTACT;
+        return type != SearchResult.TYPE_CONTACT && type != SearchResult.TYPE_CHIPS;
     }
 
     private int selected = -1;
@@ -118,6 +118,10 @@ public final class SearchResultAdapter extends BaseAdapter {
         View v = buildView(position, convertView, parent);
         SearchResult r = items.get(position);
         int bg = R.drawable.bg_pressable;
+        if (r.type == SearchResult.TYPE_CHIPS) {
+            v.setBackgroundResource(R.drawable.bg_group_card);
+            return v;
+        }
         if (r.group == SearchResult.GROUP_OPEN) bg = R.drawable.bg_group_open;
         else if (r.group == SearchResult.GROUP_CHILD) bg = R.drawable.bg_group_child;
         if (showSelection && position == selected) bg = R.drawable.bg_selected;
@@ -142,6 +146,8 @@ public final class SearchResultAdapter extends BaseAdapter {
                 return getWebView(result, convertView, parent);
             case SearchResult.TYPE_ACTION:
                 return getActionView(result, convertView, parent);
+            case SearchResult.TYPE_CHIPS:
+                return getChipsView(result, convertView, parent);
             default:
                 return getContactView(result, convertView, parent);
         }
@@ -196,6 +202,59 @@ public final class SearchResultAdapter extends BaseAdapter {
         holder.subtitle.setText(result.subtitle);
         holder.subtitle.setVisibility(result.subtitle == null || result.subtitle.isEmpty() ? View.GONE : View.VISIBLE);
         return view;
+    }
+
+    private View getChipsView(SearchResult result, View convertView, ViewGroup parent) {
+        float d = context.getResources().getDisplayMetrics().density;
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(Math.round(6 * d), Math.round(10 * d), Math.round(6 * d), Math.round(8 * d));
+        for (SearchResult.Chip chip : result.chips) {
+            LinearLayout col = new LinearLayout(context);
+            col.setOrientation(LinearLayout.VERTICAL);
+            col.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+            col.setBackgroundResource(R.drawable.bg_pressable);
+            col.setPadding(0, Math.round(4 * d), 0, Math.round(4 * d));
+
+            android.widget.FrameLayout circle = new android.widget.FrameLayout(context);
+            android.graphics.drawable.GradientDrawable oval = new android.graphics.drawable.GradientDrawable();
+            oval.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            oval.setColor(chip.color);
+            circle.setBackground(oval);
+            int size = Math.round(44 * d);
+            col.addView(circle, new LinearLayout.LayoutParams(size, size));
+            if (chip.icon != 0) {
+                ImageView icon = new ImageView(context);
+                icon.setImageResource(chip.icon);
+                icon.setColorFilter(0xFFFFFFFF);
+                int is = Math.round(22 * d);
+                circle.addView(icon, new android.widget.FrameLayout.LayoutParams(is, is, android.view.Gravity.CENTER));
+            } else {
+                TextView badge = new TextView(context);
+                badge.setText(chip.badge);
+                badge.setTextColor(0xFFFFFFFF);
+                badge.setTextSize(17);
+                badge.setGravity(android.view.Gravity.CENTER);
+                circle.addView(badge, new android.widget.FrameLayout.LayoutParams(-1, -1));
+            }
+            TextView label = new TextView(context);
+            label.setText(chip.label);
+            label.setTextColor(0xFFF5F6F8);
+            label.setTextSize(11.5f);
+            label.setSingleLine(true);
+            label.setGravity(android.view.Gravity.CENTER);
+            LinearLayout.LayoutParams llp = new LinearLayout.LayoutParams(-2, -2);
+            llp.topMargin = Math.round(5 * d);
+            col.addView(label, llp);
+
+            col.setOnClickListener(v -> chip.run.run());
+            if (chip.onLongPress != null) col.setOnLongClickListener(v -> {
+                chip.onLongPress.accept(v);
+                return true;
+            });
+            row.addView(col, new LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        return row;
     }
 
     private View getCalcView(SearchResult result, View convertView, ViewGroup parent) {
