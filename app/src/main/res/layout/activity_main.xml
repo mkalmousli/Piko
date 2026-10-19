@@ -5,16 +5,19 @@
     android:layout_height="match_parent"
     android:background="@color/piko_bg">
 
-    <LinearLayout
+    <!-- Fixed-height page area: the keyboard never resizes it, the bottom group just rides above the keyboard. -->
+    <FrameLayout
+        android:id="@+id/pager_root"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_gravity="top" />
 
-        <FrameLayout
-            android:id="@+id/pager_root"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1" />
+    <LinearLayout
+        android:id="@+id/bottom_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
 
         <LinearLayout
             android:id="@+id/page_indicator"
@@ -32,6 +35,5 @@
             android:paddingRight="12dp"
             android:paddingBottom="10dp" />
     </LinearLayout>
-
 
 </FrameLayout>

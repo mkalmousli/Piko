@@ -159,6 +159,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             updateOverviewTitle();
         });
         buildOverviewBar();
+        final View rootView = findViewById(R.id.root);
+        rootView.getViewTreeObserver().addOnGlobalLayoutListener(this::syncKeyboardLayout);
 
         pager.post(() -> pager.setCurrentItem(defaultIndex(), false));
         if (!prefs.isFirstRunDone()) startActivity(new Intent(this, com.piko.launcher.ui.settings.SetupActivity.class));
@@ -182,8 +184,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         resultsOverlay = page.findViewById(R.id.results_overlay);
         ((ViewGroup) resultsOverlay.getParent()).removeView(resultsOverlay);
         resultsOverlay.setVisibility(View.GONE);
-        ((FrameLayout) findViewById(R.id.pager_root)).addView(resultsOverlay, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        FrameLayout.LayoutParams overlayLp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        ((FrameLayout) findViewById(R.id.root)).addView(resultsOverlay, 1, overlayLp);
 
 
         searchAdapter = new SearchResultAdapter(this, new SearchResultAdapter.Listener() {
@@ -446,6 +449,59 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 hostView.setTag(item);
                 grid.addView(hostView, paramsFor(grid, item));
             }
+        }
+    }
+
+    private int maxRootHeight;
+    private boolean keyboardUp;
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        maxRootHeight = 0;
+        if (searchAdapter != null) searchAdapter.setShowSelection(keyboardUp || hasHardwareKeyboard());
+    }
+
+    private boolean hasHardwareKeyboard() {
+        android.content.res.Configuration c = getResources().getConfiguration();
+        return c.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS
+                && c.hardKeyboardHidden == android.content.res.Configuration.HARDKEYBOARDHIDDEN_NO;
+    }
+
+    /**
+     * The window still resizes for the keyboard, but the page area keeps its full size and the results overlay
+     * stops above the bottom group, so nothing on the pages is squeezed or re-laid out.
+     */
+    private void syncKeyboardLayout() {
+        View root = findViewById(R.id.root);
+        View bottom = findViewById(R.id.bottom_group);
+        int h = root.getHeight();
+        if (h <= 0 || bottom == null) return;
+        maxRootHeight = Math.max(maxRootHeight, h);
+        int full = maxRootHeight;
+        android.view.WindowInsets wi = root.getRootWindowInsets();
+        if (wi != null) {
+            android.graphics.Point real = new android.graphics.Point();
+            getWindowManager().getDefaultDisplay().getRealSize(real);
+            int[] loc = new int[2];
+            root.getLocationOnScreen(loc);
+            full = Math.max(full, real.y - loc[1] - wi.getStableInsetBottom());
+        }
+        ViewGroup.LayoutParams plp = pagerRoot.getLayoutParams();
+        if (plp.height != full) {
+            plp.height = full;
+            pagerRoot.setLayoutParams(plp);
+        }
+        FrameLayout.LayoutParams olp = (FrameLayout.LayoutParams) resultsOverlay.getLayoutParams();
+        if (olp.bottomMargin != bottom.getHeight()) {
+            olp.bottomMargin = bottom.getHeight();
+            resultsOverlay.setLayoutParams(olp);
+        }
+        boolean up = h < full - dp(120);
+        if (up != keyboardUp) {
+            keyboardUp = up;
+            searchAdapter.setShowSelection(up || hasHardwareKeyboard());
+            if (!up && !hasHardwareKeyboard() && searchInput.hasFocus()) searchInput.clearFocus();
         }
     }
 

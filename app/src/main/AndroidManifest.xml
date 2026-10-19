@@ -74,7 +74,7 @@
             android:launchMode="singleTask"
             android:stateNotNeeded="true"
             android:screenOrientation="portrait"
-            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|screenLayout|smallestScreenSize|density|uiMode|fontScale"
             android:windowSoftInputMode="adjustResize|stateVisible"
             android:exported="true">
             <intent-filter>
@@ -99,7 +99,7 @@
         <activity
             android:name=".ui.widget.WidgetPickerActivity"
             android:label="@string/menu_add_widget"
-            android:windowSoftInputMode="stateAlwaysHidden"
+            android:windowSoftInputMode="stateVisible|adjustNothing"
             android:screenOrientation="portrait"
             android:exported="false" />
 

@@ -94,6 +94,14 @@ public final class SearchResultAdapter extends BaseAdapter {
     }
 
     private int selected = -1;
+    private boolean showSelection = true;
+
+    /** The highlight only makes sense while a keyboard (soft or hardware) can drive it. */
+    public void setShowSelection(boolean show) {
+        if (showSelection == show) return;
+        showSelection = show;
+        notifyDataSetChanged();
+    }
 
     /** Keyboard selection (display index, -1 = none). */
     public void setSelected(int position) {
@@ -108,7 +116,7 @@ public final class SearchResultAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         View v = buildView(position, convertView, parent);
-        v.setBackgroundResource(position == selected ? R.drawable.bg_selected : R.drawable.bg_pressable);
+        v.setBackgroundResource(showSelection && position == selected ? R.drawable.bg_selected : R.drawable.bg_pressable);
         return v;
     }
 

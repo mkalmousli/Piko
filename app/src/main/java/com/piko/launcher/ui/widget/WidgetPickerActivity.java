@@ -77,6 +77,7 @@ public final class WidgetPickerActivity extends Activity {
             }
         });
 
+        searchInput.requestFocus();
         loadGroupsAsync();
     }
 
