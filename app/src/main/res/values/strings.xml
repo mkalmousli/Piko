@@ -96,6 +96,12 @@
     <string name="menu_add_to_folder">Add to folder</string>
     <string name="menu_remove_from_folder">Remove from folder</string>
     <string name="menu_rename">Rename</string>
+    <string name="menu_edit_shortcut">Edit shortcut</string>
+    <string name="shortcut_name">Name</string>
+    <string name="shortcut_target">Number, address or link</string>
+    <string name="shortcut_query">Search text</string>
+    <string name="shortcut_choose_icon">Choose icon</string>
+    <string name="shortcut_reset_icon">Reset</string>
     <string name="new_folder">New folder</string>
     <string name="folder_default_name">Folder</string>
     <string name="folder_add_app">Add app</string>

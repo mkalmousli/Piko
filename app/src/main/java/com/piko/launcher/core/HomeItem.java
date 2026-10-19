@@ -36,6 +36,8 @@ public final class HomeItem {
     // TYPE_SHORTCUT (label is the title)
     public String kind;
     public String data;
+    /** Optional custom icon file (absolute path) overriding the kind's built-in icon. */
+    public String iconPath;
 
     // TYPE_FOLDER (label is the title)
     public java.util.List<String> children = new java.util.ArrayList<>();
@@ -71,6 +73,7 @@ public final class HomeItem {
             o.put("label", label);
             o.put("kind", kind);
             o.put("data", data);
+            if (iconPath != null) o.put("icon", iconPath);
         } else if (type == TYPE_FOLDER) {
             o.put("label", label);
             o.put("children", new org.json.JSONArray(children));
@@ -100,6 +103,7 @@ public final class HomeItem {
             item.label = o.optString("label");
             item.kind = o.optString("kind");
             item.data = o.optString("data");
+            item.iconPath = o.has("icon") ? o.optString("icon") : null;
         } else if (item.type == TYPE_FOLDER) {
             item.label = o.optString("label");
             org.json.JSONArray arr = o.optJSONArray("children");

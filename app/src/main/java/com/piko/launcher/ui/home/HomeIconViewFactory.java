@@ -70,6 +70,17 @@ public final class HomeIconViewFactory {
     }
 
     public static View createShortcut(Context context, HomeItem item) {
+        if (item.iconPath != null) {
+            android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(item.iconPath);
+            if (b != null) {
+                View view = chipIcon(context, item, iconForKind(item.kind));
+                ImageView icon = view.findViewById(R.id.icon);
+                icon.setBackground(null);
+                icon.setPadding(0, 0, 0, 0);
+                icon.setImageDrawable(new android.graphics.drawable.BitmapDrawable(context.getResources(), b));
+                return view;
+            }
+        }
         if ("pin".equals(item.kind) || "intent".equals(item.kind)) {
             android.graphics.drawable.Drawable d = "pin".equals(item.kind) ? pinnedIcon(context, item.data) : fileIcon(context, item.data);
             if (d != null) {

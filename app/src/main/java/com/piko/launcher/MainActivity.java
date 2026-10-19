@@ -64,6 +64,7 @@ import java.util.List;
 public final class MainActivity extends Activity implements AppIndexer.Listener, ContactIndexer.Listener {
 
     private static final int REQ_PICK_WIDGET_PROVIDER = 771;
+    private static final int REQ_PICK_SHORTCUT_ICON = 772;
     private static final int REQ_BIND_WIDGET = 772;
     private static final int REQ_CONFIGURE_WIDGET = 773;
 
@@ -1220,6 +1221,15 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             if (provider == null) return;
             pendingWidgetChoose = data.getBooleanExtra(WidgetPickerActivity.EXTRA_CHOOSE_PLACE, false);
             startWidgetBind(provider);
+        } else if (requestCode == REQ_PICK_SHORTCUT_ICON) {
+            if (resultCode != RESULT_OK || data == null || data.getData() == null || editingShortcut == null) return;
+            String path = saveShortcutIcon(data.getData());
+            if (path == null) {
+                Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+            } else {
+                editedIconPath = path;
+                refreshEditIconPreview();
+            }
         } else if (requestCode == REQ_BIND_WIDGET) {
             if (resultCode == RESULT_OK) {
                 proceedAfterWidgetBind(pendingWidgetId);
@@ -1353,6 +1363,133 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         for (AppInfo a : rawApps) if (a.key().equals(key)) return a;
         int slash = key.indexOf('/');
         return slash < 0 ? null : new AppInfo(key.substring(0, slash), key.substring(slash + 1), key.substring(0, slash));
+    }
+
+    /** Shortcut being edited while the icon picker is open, and the dialog's icon state. */
+    private HomeItem editingShortcut;
+    private String editedIconPath;
+    private ImageView editIconPreview;
+
+    /** Whether the kind's data is a plain editable value (number, address, URL, query). */
+    private static boolean editableTarget(String kind) {
+        switch (kind) {
+            case "call": case "sms": case "wa": case "wacall": case "copy": case "addcontact":
+            case "email": case "addemail": case "copyemail": case "url": case "web":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private void editShortcut(HomeGridLayout grid, HomeItem item, View child) {
+        editingShortcut = item;
+        editedIconPath = item.iconPath;
+        boolean web = "web".equals(item.kind);
+        int nl = web ? item.data.indexOf('\n') : -1;
+        String target = web ? (nl < 0 ? "" : item.data.substring(nl + 1)) : item.data;
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(20), dp(8), dp(20), 0);
+        EditText name = new EditText(this);
+        name.setSingleLine(true);
+        name.setHint(R.string.shortcut_name);
+        name.setText(item.label);
+        box.addView(name);
+        EditText value = new EditText(this);
+        value.setSingleLine(true);
+        value.setHint(web ? R.string.shortcut_query : R.string.shortcut_target);
+        value.setText(target);
+        if (editableTarget(item.kind)) box.addView(value);
+
+        LinearLayout iconRow = new LinearLayout(this);
+        iconRow.setOrientation(LinearLayout.HORIZONTAL);
+        iconRow.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        iconRow.setPadding(0, dp(12), 0, 0);
+        editIconPreview = new ImageView(this);
+        iconRow.addView(editIconPreview, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        android.widget.Button choose = new android.widget.Button(this);
+        choose.setText(R.string.shortcut_choose_icon);
+        choose.setOnClickListener(v -> {
+            Intent pick = new Intent(Intent.ACTION_GET_CONTENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE);
+            startActivityForResult(pick, REQ_PICK_SHORTCUT_ICON);
+        });
+        iconRow.addView(choose);
+        android.widget.Button reset = new android.widget.Button(this);
+        reset.setText(R.string.shortcut_reset_icon);
+        reset.setOnClickListener(v -> {
+            editedIconPath = null;
+            refreshEditIconPreview();
+        });
+        iconRow.addView(reset);
+        box.addView(iconRow);
+        refreshEditIconPreview();
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.menu_edit_shortcut)
+                .setView(box)
+                .setPositiveButton(R.string.action_save, (d, w) -> {
+                    String label = name.getText().toString().trim();
+                    if (!label.isEmpty()) item.label = label;
+                    String v = value.getText().toString().trim();
+                    if (editableTarget(item.kind) && !v.isEmpty()) {
+                        if (web) {
+                            String engine = nl < 0 ? item.data : item.data.substring(0, nl);
+                            item.data = engine + "\n" + v;
+                        } else if ("url".equals(item.kind)) {
+                            item.data = v.matches("(?i)^[a-z][a-z0-9+.-]*:.*") ? v : "https://" + v;
+                        } else {
+                            item.data = v;
+                        }
+                    }
+                    item.iconPath = editedIconPath;
+                    layoutStore.saveAll(homeItems);
+                    ViewGroup.LayoutParams lp = child.getLayoutParams();
+                    int index = grid.indexOfChild(child);
+                    grid.removeView(child);
+                    grid.addView(viewForItem(item), index, lp);
+                    editingShortcut = null;
+                })
+                .setNegativeButton(R.string.action_cancel, (d, w) -> editingShortcut = null)
+                .setOnCancelListener(d -> editingShortcut = null)
+                .show();
+    }
+
+    private void refreshEditIconPreview() {
+        if (editIconPreview == null || editingShortcut == null) return;
+        android.graphics.Bitmap b = editedIconPath == null ? null : android.graphics.BitmapFactory.decodeFile(editedIconPath);
+        if (b != null) {
+            editIconPreview.setBackground(null);
+            editIconPreview.setPadding(0, 0, 0, 0);
+            editIconPreview.setImageBitmap(b);
+        } else {
+            int pad = dp(8);
+            editIconPreview.setBackgroundResource(R.drawable.bg_shortcut_chip);
+            editIconPreview.setPadding(pad, pad, pad, pad);
+            editIconPreview.setImageResource(HomeIconViewFactory.iconForKind(editingShortcut.kind));
+        }
+    }
+
+    /** Scales the picked image to a square icon and stores it in app-private storage. */
+    private String saveShortcutIcon(android.net.Uri uri) {
+        try (java.io.InputStream in = getContentResolver().openInputStream(uri)) {
+            android.graphics.Bitmap src = android.graphics.BitmapFactory.decodeStream(in);
+            if (src == null) return null;
+            int size = dp(96);
+            int side = Math.min(src.getWidth(), src.getHeight());
+            android.graphics.Bitmap square = android.graphics.Bitmap.createBitmap(src,
+                    (src.getWidth() - side) / 2, (src.getHeight() - side) / 2, side, side);
+            android.graphics.Bitmap out = android.graphics.Bitmap.createScaledBitmap(square, size, size, true);
+            java.io.File dir = new java.io.File(getFilesDir(), "custom_icons");
+            dir.mkdirs();
+            java.io.File file = new java.io.File(dir, "shortcut_" + System.currentTimeMillis() + ".png");
+            try (java.io.OutputStream os = new java.io.FileOutputStream(file)) {
+                out.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, os);
+            }
+            return file.getAbsolutePath();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void renameItem(HomeItem item, View child) {
@@ -1490,7 +1627,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         final int idName = item.type == HomeItem.TYPE_APP ? ++id : -1;
         final int idMovePage = gridPages.size() > 1 ? ++id : -1;
         final int idFolder = item.type == HomeItem.TYPE_APP ? ++id : -1;
-        final int idRename = item.type == HomeItem.TYPE_FOLDER || item.type == HomeItem.TYPE_SHORTCUT ? ++id : -1;
+        final int idRename = item.type == HomeItem.TYPE_FOLDER ? ++id : -1;
+        final int idEditShortcut = item.type == HomeItem.TYPE_SHORTCUT ? ++id : -1;
         final int idRemove = ++id;
 
         if (idInfo != -1) menu.getMenu().add(0, idInfo, 0, R.string.menu_app_info);
@@ -1502,6 +1640,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (idMovePage != -1) menu.getMenu().add(0, idMovePage, 4, R.string.menu_add_to_home);
         if (idFolder != -1) menu.getMenu().add(0, idFolder, 4, R.string.menu_add_to_folder);
         if (idRename != -1) menu.getMenu().add(0, idRename, 1, R.string.menu_rename);
+        if (idEditShortcut != -1) menu.getMenu().add(0, idEditShortcut, 1, R.string.menu_edit_shortcut);
         menu.getMenu().add(0, idRemove, 5, R.string.menu_remove_from_home);
 
         menu.setOnMenuItemClickListener(m -> {
@@ -1522,6 +1661,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 chooseFolder(grid, item, child);
             } else if (clicked == idRename) {
                 renameItem(item, child);
+            } else if (clicked == idEditShortcut) {
+                editShortcut(grid, item, child);
             } else if (clicked == idRemove) {
                 confirmRemoveHomeItem(grid, item, child);
             }
