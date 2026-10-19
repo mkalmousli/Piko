@@ -85,6 +85,15 @@
             </intent-filter>
         </activity>
 
+        <receiver
+            android:name=".InstallShortcutReceiver"
+            android:permission="com.android.launcher.permission.INSTALL_SHORTCUT"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.android.launcher.action.INSTALL_SHORTCUT" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".PinShortcutActivity"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"

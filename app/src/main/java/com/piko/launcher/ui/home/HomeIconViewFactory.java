@@ -70,8 +70,8 @@ public final class HomeIconViewFactory {
     }
 
     public static View createShortcut(Context context, HomeItem item) {
-        if ("pin".equals(item.kind)) {
-            android.graphics.drawable.Drawable d = pinnedIcon(context, item.data);
+        if ("pin".equals(item.kind) || "intent".equals(item.kind)) {
+            android.graphics.drawable.Drawable d = "pin".equals(item.kind) ? pinnedIcon(context, item.data) : fileIcon(context, item.data);
             if (d != null) {
                 View view = chipIcon(context, item, iconForKind("pin"));
                 ImageView icon = view.findViewById(R.id.icon);
@@ -82,6 +82,14 @@ public final class HomeIconViewFactory {
             }
         }
         return chipIcon(context, item, iconForKind(item.kind));
+    }
+
+    private static android.graphics.drawable.Drawable fileIcon(Context context, String data) {
+        int nl = data.indexOf('\n');
+        if (nl <= 0) return null;
+        android.graphics.Bitmap b = android.graphics.BitmapFactory.decodeFile(
+                new java.io.File(context.getFilesDir(), data.substring(0, nl)).getPath());
+        return b == null ? null : new android.graphics.drawable.BitmapDrawable(context.getResources(), b);
     }
 
     /** The icon another app supplied for a pinned shortcut (data is "package\nid"), or null. */

@@ -70,7 +70,7 @@ public final class PinShortcutActivity extends Activity {
         Toast.makeText(this, item.label + " added", Toast.LENGTH_SHORT).show();
     }
 
-    private static boolean cellFree(List<HomeItem> items, int page, int col, int row) {
+    static boolean cellFree(List<HomeItem> items, int page, int col, int row) {
         for (HomeItem it : items) {
             if (it.page != page) continue;
             if (col >= it.col && col < it.col + it.colSpan && row >= it.row && row < it.row + it.rowSpan) return false;

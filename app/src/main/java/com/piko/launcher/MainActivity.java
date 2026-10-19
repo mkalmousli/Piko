@@ -945,6 +945,16 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 break;
             }
             case "url": openUrl(data); break;
+            case "intent": {
+                try {
+                    Intent i = Intent.parseUri(data.substring(data.indexOf('\n') + 1), 0);
+                    i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(i);
+                } catch (Exception e) {
+                    Toast.makeText(this, R.string.widget_add_failed, Toast.LENGTH_SHORT).show();
+                }
+                break;
+            }
             case "pin": {
                 int nl = data.indexOf('\n');
                 try {
