@@ -25,6 +25,22 @@ public final class SearchResult {
     /** TYPE_ACTION only: how to rebuild this row as a home shortcut (see {@link HomeItem}). Null = not pinnable. */
     public String shortcutKind, shortcutData;
 
+    /** Grouping: header rows toggle their children; children are drawn indented under an open header. */
+    public static final int GROUP_NONE = 0, GROUP_HEADER = 1, GROUP_OPEN = 2, GROUP_CHILD = 3;
+    public int group = GROUP_NONE;
+    /** Copied on long-press when set (e.g. a contact's number). */
+    public String copyText;
+
+    public SearchResult grouped(int g) {
+        group = g;
+        return this;
+    }
+
+    public SearchResult copyOnLongPress(String text) {
+        copyText = text;
+        return this;
+    }
+
     public SearchResult withIcon(int res) {
         icon = res;
         return this;

@@ -268,6 +268,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 showAppOptionsMenu(v, result.app);
                 return true;
             }
+            if (result.type == SearchResult.TYPE_ACTION && result.copyText != null) {
+                IntentUtil.copyToClipboard(this, "copy", result.copyText);
+                return true;
+            }
             if (result.type == SearchResult.TYPE_ACTION && result.shortcutKind != null) {
                 PopupMenu menu = new PopupMenu(this, v);
                 menu.getMenu().add(0, 1, 0, R.string.menu_add_to_home);
@@ -610,10 +614,18 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 currentResults.addAll(at, emailRows(trimmed));
             }
             if (prefs.flag(Prefs.FLAG_SEARCH_WEB)) {
+                List<SearchResult> more = new ArrayList<>();
+                boolean first = true;
                 for (String engineId : prefs.enabledSearchEngines()) {
                     com.piko.launcher.core.WebSearchEngines.Engine e = prefs.engineById(engineId);
-                    currentResults.add(SearchResult.forAction(e.label.substring(0, 1), getString(R.string.search_engine_for, e.label),
-                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)).pinnable("web", engineId));
+                    SearchResult row = SearchResult.forAction(e.label.substring(0, 1), getString(R.string.search_engine_for, e.label),
+                            trimmed, () -> IntentUtil.webSearch(this, engineId, trimmed)).pinnable("web", engineId);
+                    if (first) currentResults.add(row);
+                    else more.add(row);
+                    first = false;
+                }
+                if (!more.isEmpty()) {
+                    currentResults.addAll(group("web", "More search engines", String.valueOf(more.size()), R.drawable.ic_globe, null, more));
                 }
             }
         }
@@ -621,6 +633,18 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         if (!idle && prefs.flag(Prefs.FLAG_QUICK_ACTIONS)) addQuickActions(query.trim());
 
         renderResults(idle);
+    }
+
+    /** One header row that toggles its children open/closed (children listed right after it). */
+    private List<SearchResult> group(String key, String title, String sub, int icon, String copy, List<SearchResult> kids) {
+        boolean open = expandedContacts.contains(key);
+        List<SearchResult> rows = new ArrayList<>();
+        rows.add(SearchResult.forAction(null, title, sub, () -> {
+            if (!expandedContacts.remove(key)) expandedContacts.add(key);
+            filterAndShow(searchInput.getText().toString());
+        }).withIcon(icon).grouped(open ? SearchResult.GROUP_OPEN : SearchResult.GROUP_HEADER).copyOnLongPress(copy));
+        if (open) for (SearchResult k : kids) rows.add(k.grouped(SearchResult.GROUP_CHILD));
+        return rows;
     }
 
     private final java.util.Set<String> expandedContacts = new java.util.HashSet<>();
@@ -637,18 +661,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             final String who = c.name.equals(c.phoneNumber) ? c.phoneNumber : c.name;
             final String sub = c.name.equals(c.phoneNumber) ? "" : c.phoneNumber;
             final String q = query;
-            final String key = SearchEngine.contactKey(c);
-            if (!expandedContacts.contains(key)) {
-                out.add(SearchResult.forAction(null, who, sub, () -> {
-                    expandedContacts.add(key);
-                    filterAndShow(searchInput.getText().toString());
-                }).withIcon(R.drawable.ic_person));
-                continue;
-            }
-            out.add(SearchResult.forAction(null, who, sub, () -> {
-                expandedContacts.remove(key);
-                filterAndShow(searchInput.getText().toString());
-            }).withIcon(R.drawable.ic_person));
+            List<SearchResult> kids = new ArrayList<>();
+            List<SearchResult> out0 = out;
+            out = kids;
             if (prefs.flag(Prefs.FLAG_ACTION_CALL)) out.add(contactAction("call", c.phoneNumber, getString(R.string.act_call, who), sub, c, q,
                     () -> doCall(c.phoneNumber)));
             if (prefs.flag(Prefs.FLAG_ACTION_SMS)) out.add(contactAction("sms", c.phoneNumber, getString(R.string.act_sms, who), sub, c, q,
@@ -663,20 +678,22 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                     () -> addToContacts(c.phoneNumber)));
             out.add(contactAction("copy", c.phoneNumber, getString(R.string.act_copy_number, who), sub, c, q,
                     () -> IntentUtil.copyToClipboard(this, "number", c.phoneNumber)));
+            out = out0;
+            out.addAll(group("c:" + SearchEngine.contactKey(c), who, sub, R.drawable.ic_person, c.phoneNumber, kids));
         }
         return out;
     }
 
     private List<SearchResult> emailRows(String email) {
-        List<SearchResult> rows = new ArrayList<>();
-        rows.add(SearchResult.forAction(null, getString(R.string.act_write_email, email), "", () -> writeEmail(email))
+        List<SearchResult> kids = new ArrayList<>();
+        kids.add(SearchResult.forAction(null, getString(R.string.act_write_email, email), "", () -> writeEmail(email))
                 .withIcon(HomeIconViewFactory.iconForKind("email")).pinnable("email", email));
-        rows.add(SearchResult.forAction(null, getString(R.string.act_add_contact), email, () -> addEmailToContacts(email))
+        kids.add(SearchResult.forAction(null, getString(R.string.act_add_contact), email, () -> addEmailToContacts(email))
                 .withIcon(HomeIconViewFactory.iconForKind("addemail")).pinnable("addemail", email));
-        rows.add(SearchResult.forAction(null, getString(R.string.act_copy_email), email,
+        kids.add(SearchResult.forAction(null, getString(R.string.act_copy_email), email,
                 () -> IntentUtil.copyToClipboard(this, "email", email))
                 .withIcon(HomeIconViewFactory.iconForKind("copyemail")).pinnable("copyemail", email));
-        return rows;
+        return group("e:" + email, email, "", R.drawable.ic_mail, email, kids);
     }
 
     private void writeEmail(String email) {

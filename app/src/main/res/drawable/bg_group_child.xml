@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="@color/piko_accent">
+    <item>
+        <layer-list>
+            <item>
+                <shape android:shape="rectangle">
+                    <solid android:color="#1A7C9CFF" />
+                </shape>
+            </item>
+            <item android:right="-1000dp">
+                <shape android:shape="rectangle">
+                    <solid android:color="#7C9CFF" />
+                    <size android:width="3dp" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+</ripple>

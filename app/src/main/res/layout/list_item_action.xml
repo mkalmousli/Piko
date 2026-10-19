@@ -54,4 +54,11 @@
             android:singleLine="true"
             android:ellipsize="end" />
     </LinearLayout>
+
+    <ImageView
+        android:id="@+id/chevron"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
 </LinearLayout>

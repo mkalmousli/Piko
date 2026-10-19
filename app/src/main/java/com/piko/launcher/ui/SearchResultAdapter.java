@@ -116,7 +116,18 @@ public final class SearchResultAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         View v = buildView(position, convertView, parent);
-        v.setBackgroundResource(showSelection && position == selected ? R.drawable.bg_selected : R.drawable.bg_pressable);
+        SearchResult r = items.get(position);
+        int bg = R.drawable.bg_pressable;
+        if (r.group == SearchResult.GROUP_OPEN) bg = R.drawable.bg_group_open;
+        else if (r.group == SearchResult.GROUP_CHILD) bg = R.drawable.bg_group_child;
+        if (showSelection && position == selected) bg = R.drawable.bg_selected;
+        v.setBackgroundResource(bg);
+        if (r.type == SearchResult.TYPE_ACTION) {
+            float d = context.getResources().getDisplayMetrics().density;
+            boolean child = r.group == SearchResult.GROUP_CHILD;
+            v.setPadding(Math.round((child ? 28 : 8) * d), 0, Math.round(14 * d), 0);
+            v.getLayoutParams().height = Math.round((child ? 44 : 52) * d);
+        }
         return v;
     }
 
@@ -163,6 +174,7 @@ public final class SearchResultAdapter extends BaseAdapter {
             holder.badgeIcon = view.findViewById(R.id.badge_icon);
             holder.title = view.findViewById(R.id.title);
             holder.subtitle = view.findViewById(R.id.subtitle);
+            holder.chevron = view.findViewById(R.id.chevron);
             view.setTag(holder);
         } else {
             holder = (ActionHolder) view.getTag();
@@ -171,6 +183,16 @@ public final class SearchResultAdapter extends BaseAdapter {
         holder.badgeIcon.setImageResource(result.icon);
         holder.badgeIcon.setVisibility(result.icon == 0 ? View.GONE : View.VISIBLE);
         holder.title.setText(TextHighlighter.highlight(context, result.text, currentQuery));
+        boolean header = result.group == SearchResult.GROUP_HEADER || result.group == SearchResult.GROUP_OPEN;
+        boolean open = result.group == SearchResult.GROUP_OPEN;
+        holder.chevron.setVisibility(header ? View.VISIBLE : View.GONE);
+        if (header) {
+            holder.chevron.setImageResource(R.drawable.ic_expand);
+            holder.chevron.setRotation(open ? 180f : 0f);
+            holder.chevron.setColorFilter(open ? 0xFF7C9CFF : 0xFF9AA0AC);
+        }
+        holder.title.setTextColor(open ? 0xFF7C9CFF : 0xFFF5F6F8);
+        holder.badge.setTextColor(0xFFFFFFFF);
         holder.subtitle.setText(result.subtitle);
         holder.subtitle.setVisibility(result.subtitle == null || result.subtitle.isEmpty() ? View.GONE : View.VISIBLE);
         return view;
@@ -307,7 +329,7 @@ public final class SearchResultAdapter extends BaseAdapter {
 
     private static final class ActionHolder {
         TextView badge, title, subtitle;
-        android.widget.ImageView badgeIcon;
+        android.widget.ImageView badgeIcon, chevron;
     }
 
     private static final class CalcHolder {
