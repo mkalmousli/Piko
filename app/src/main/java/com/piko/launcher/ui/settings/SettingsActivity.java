@@ -32,7 +32,9 @@ public final class SettingsActivity extends Activity {
             prefs.setRows(v);
             prefs.bumpLayoutRevision();
         });
-        ui.nav("Default page", pageName(prefs.defaultPage()), v -> pickDefaultPage(prefs));
+        if (prefs.gridPageCount() > 1) {
+            ui.nav("Default page", pageName(Math.min(prefs.defaultPage(), prefs.gridPageCount() - 1)), v -> pickDefaultPage(prefs));
+        }
         ui.toggle("Free-form icon placement", prefs.freeform(), (b, on) -> {
             prefs.setFreeform(on);
             prefs.bumpLayoutRevision();
@@ -44,7 +46,7 @@ public final class SettingsActivity extends Activity {
         ui.nav("Icon pack", null, v -> startActivity(new Intent(this, IconPackActivity.class)));
 
         ui.section("Behaviour");
-        ui.toggle("Show keyboard on the search page", prefs.autoFocusKeyboard(),
+        ui.toggle("Show keyboard automatically", prefs.autoFocusKeyboard(),
                 (b, on) -> prefs.setAutoFocusKeyboard(on));
         ui.toggle("Call directly (skip dialer)", prefs.directCall(), (b, on) -> prefs.setDirectCall(on));
         ui.nav("Permissions", null, v -> startActivity(new Intent(this, PermissionsActivity.class)));
@@ -58,16 +60,16 @@ public final class SettingsActivity extends Activity {
     }
 
     private String pageName(int index) {
-        return index == 0 ? "Search page" : "Home page " + index;
+        return "Page " + (index + 1);
     }
 
     private void pickDefaultPage(Prefs prefs) {
         int n = Math.max(1, prefs.gridPageCount());
-        String[] names = new String[n + 1];
-        for (int i = 0; i <= n; i++) names[i] = pageName(i);
+        String[] names = new String[n];
+        for (int i = 0; i < n; i++) names[i] = pageName(i);
         new AlertDialog.Builder(this)
                 .setTitle("Default page")
-                .setSingleChoiceItems(names, Math.min(prefs.defaultPage(), n), (d, which) -> {
+                .setSingleChoiceItems(names, Math.min(prefs.defaultPage(), n - 1), (d, which) -> {
                     prefs.setDefaultPage(which);
                     d.dismiss();
                     build();

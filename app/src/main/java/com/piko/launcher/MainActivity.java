@@ -67,9 +67,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private static final int REQ_BIND_WIDGET = 772;
     private static final int REQ_CONFIGURE_WIDGET = 773;
 
-    /** Reserved {@link HomeItem#page} value for the small widget area embedded in the search page itself. */
-    private static final int PAGE_SEARCH_WIDGETS = -1;
-
     private Prefs prefs;
     private UsageStore usageStore;
     private HomeLayoutStore layoutStore;
@@ -78,7 +75,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private HorizontalPager pager;
     private FrameLayout pagerRoot;
-    private View searchPageView;
     private LinearLayout overviewBar;
     private TextView overviewTitle;
     private LinearLayout ovRow;
@@ -91,7 +87,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private TextView emptyText;
     private FrameLayout idleWidgetArea;
     private SearchResultAdapter searchAdapter;
-    private HomeGridLayout searchWidgetGrid;
 
     private final List<HomeGridLayout> gridPages = new ArrayList<>();
     private List<HomeItem> homeItems = new ArrayList<>();
@@ -149,9 +144,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
         homeItems = layoutStore.loadAll();
 
-        View searchPage = buildSearchPage();
-        searchPageView = searchPage;
-        pager.addView(searchPage);
+        buildSearchPage();
 
         int pageCount = Math.max(1, prefs.gridPageCount());
         for (int i = 0; i < pageCount; i++) {
@@ -160,14 +153,14 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             pager.addView(grid);
         }
 
-        buildPageIndicator(1 + pageCount);
+        buildPageIndicator(pageCount);
         pager.setOnPageChangeListener(index -> {
             updatePageIndicator(index);
             updateOverviewTitle();
         });
         buildOverviewBar();
 
-        pager.post(() -> pager.setCurrentItem(Math.min(prefs.defaultPage(), gridPages.size()), false));
+        pager.post(() -> pager.setCurrentItem(defaultIndex(), false));
         if (!prefs.isFirstRunDone()) startActivity(new Intent(this, com.piko.launcher.ui.settings.SetupActivity.class));
         pager.post(this::updateIndicatorInitial);
     }
@@ -192,8 +185,6 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         ((FrameLayout) findViewById(R.id.pager_root)).addView(resultsOverlay, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        searchWidgetGrid = createGrid(PAGE_SEARCH_WIDGETS, prefs.columns(), prefs.rows());
-        idleWidgetArea.addView(searchWidgetGrid);
 
         searchAdapter = new SearchResultAdapter(this, new SearchResultAdapter.Listener() {
             @Override
@@ -341,7 +332,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         grid.setCallbacks(new HomeGridLayout.Callbacks() {
             @Override
             public void onEmptyCellLongPress(int col, int row) {
-                if (pageId == PAGE_SEARCH_WIDGETS || overview) showAddItemMenu(grid, pageId, col, row);
+                if (overview) showAddItemMenu(grid, pageId, col, row);
                 else enterOverview();
             }
 
@@ -460,6 +451,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     private void buildPageIndicator(int totalPages) {
         pageIndicator.removeAllViews();
+        pageIndicator.setVisibility(totalPages > 1 ? View.VISIBLE : View.INVISIBLE);
         int dotSize = (int) (7 * getResources().getDisplayMetrics().density);
         int margin = (int) (4 * getResources().getDisplayMetrics().density);
         for (int i = 0; i < totalPages; i++) {
@@ -746,7 +738,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         menu.setOnMenuItemClickListener(item -> {
             switch (item.getItemId()) {
                 case 5:
-                    startWidgetPicker(Math.max(0, pager.getCurrentItem() - 1), 0, 0, app.packageName);
+                    startWidgetPicker(pager.getCurrentItem(), 0, 0, app.packageName);
                     return true;
                 case 1:
                     addAppToFirstFreeCell(app);
@@ -769,7 +761,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     // --------------------------------------------------------- add to grid
 
     private HomeGridLayout gridForPage(int pageId) {
-        return pageId == PAGE_SEARCH_WIDGETS ? searchWidgetGrid : gridPages.get(pageId);
+        return gridPages.get(pageId);
     }
 
     private void showAddItemMenu(HomeGridLayout grid, int pageIndex, int col, int row) {
@@ -807,9 +799,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
 
     /** Puts a new item in the first free cell, preferring the page the user is looking at. */
     private void placeOnHome(HomeItem item) {
-        int current = pager.getCurrentItem() - 1;
+        int current = pager.getCurrentItem();
         for (int n = 0; n < gridPages.size(); n++) {
-            int p = current >= 0 ? (current + n) % gridPages.size() : n;
+            int p = (current + n) % gridPages.size();
             HomeGridLayout grid = gridPages.get(p);
             int[] cell = findFreeArea(grid, 1, 1);
             if (cell == null) continue;
@@ -1215,9 +1207,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     /** Drag-to-edge page move: keeps the cell if free on the neighbouring page, else the first free area. */
     private HomeGridLayout moveItemToAdjacentPage(HomeGridLayout source, View child, int direction) {
         HomeItem item = (HomeItem) child.getTag();
-        int targetIdx = item.page + 1 + direction;
+        int targetIdx = item.page + direction;
         if (targetIdx < 0) return null;
-        if (targetIdx > gridPages.size()) {
+        if (targetIdx >= gridPages.size()) {
             // Dragged past the last page: grow a fresh one on the fly (up to a sane limit).
             if (gridPages.size() >= 8) return null;
             HomeGridLayout fresh = createGrid(gridPages.size(), prefs.columns(), prefs.rows());
@@ -1225,10 +1217,10 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             pager.addView(fresh);
             prefs.setGridPageCount(gridPages.size());
             builtLayoutRevision = prefs.layoutRevision();
-            buildPageIndicator(1 + gridPages.size());
+            buildPageIndicator(gridPages.size());
             updatePageIndicator(pager.getCurrentItem());
         }
-        int targetPage = targetIdx - 1;
+        int targetPage = targetIdx;
         HomeGridLayout target = gridForPage(targetPage);
         int[] cell = prefs.freeform() || target.isAreaFree(item.col, item.row, item.colSpan, item.rowSpan, null)
                 ? new int[]{item.col, item.row}
@@ -1278,8 +1270,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
         });
         ovDelete = ovButton(R.drawable.ic_trash, R.string.ov_delete_page, v -> deletePage());
         ovWidget = ovButton(R.drawable.ic_add_circle, R.string.ov_add_item, v -> {
-            int g = pager.getCurrentItem() - 1;
-            if (g >= 0) startWidgetPicker(g, 0, 0, null);
+            startWidgetPicker(pager.getCurrentItem(), 0, 0, null);
         });
         ovRow.addView(ovTidy);
         ovRow.addView(ovDefault);
@@ -1400,21 +1391,26 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     private void updateOverviewTitle() {
         if (overviewTitle == null) return;
         int idx = pager.getCurrentItem();
-        String name = idx == 0 ? "Search page" : "Page " + idx + " of " + gridPages.size();
-        overviewTitle.setText((idx == prefs.defaultPage() ? name + " · default" : name) + "\n" + getString(R.string.ov_swipe_hint));
+        int n = gridPages.size();
+        boolean isDefault = n == 1 || idx == defaultIndex();
+        String name = n == 1 ? "Home" : "Page " + (idx + 1) + " of " + n;
+        overviewTitle.setText((isDefault && n > 1 ? name + " · default" : name) + "\n" + getString(R.string.ov_swipe_hint));
         if (!overview) return;
-        int g = idx - 1;
         boolean hasItems = false;
-        if (g >= 0) for (HomeItem it : homeItems) if (it.page == g) { hasItems = true; break; }
+        for (HomeItem it : homeItems) if (it.page == idx) { hasItems = true; break; }
         ovTidy.setVisibility(hasItems ? View.VISIBLE : View.GONE);
-        ovDefault.setVisibility(idx == prefs.defaultPage() ? View.GONE : View.VISIBLE);
-        ovDelete.setVisibility(g >= 0 && gridPages.size() > 1 ? View.VISIBLE : View.GONE);
-        ovWidget.setVisibility(g >= 0 ? View.VISIBLE : View.GONE);
-        boolean room = gridPages.size() < 8;
-        ovAddPage.setVisibility(room && idx == gridPages.size() ? View.VISIBLE : View.GONE);
-        ovAddLeft.setVisibility(room && idx <= 1 ? View.VISIBLE : View.GONE);
+        ovDefault.setVisibility(isDefault ? View.GONE : View.VISIBLE);
+        ovDelete.setVisibility(n > 1 ? View.VISIBLE : View.GONE);
+        ovWidget.setVisibility(View.VISIBLE);
+        boolean room = n < 8;
+        ovAddPage.setVisibility(room && idx == n - 1 ? View.VISIBLE : View.GONE);
+        ovAddLeft.setVisibility(room && idx == 0 ? View.VISIBLE : View.GONE);
         ovPrev.setVisibility(idx > 0 ? View.VISIBLE : View.GONE);
-        ovNext.setVisibility(idx < gridPages.size() ? View.VISIBLE : View.GONE);
+        ovNext.setVisibility(idx < n - 1 ? View.VISIBLE : View.GONE);
+    }
+
+    private int defaultIndex() {
+        return Math.max(0, Math.min(prefs.defaultPage(), gridPages.size() - 1));
     }
 
     /** Rebuilds every grid page from {@link #homeItems} after a structural change, then focuses one. */
@@ -1428,9 +1424,9 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             gridPages.add(grid);
             pager.addView(grid);
         }
-        buildPageIndicator(1 + count);
+        buildPageIndicator(count);
         layoutStore.saveAll(homeItems);
-        pager.setCurrentItem(Math.max(0, Math.min(focusIndex, count)), false);
+        pager.setCurrentItem(Math.max(0, Math.min(focusIndex, count - 1)), false);
         updatePageIndicator(pager.getCurrentItem());
         updateOverviewTitle();
     }
@@ -1442,12 +1438,12 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             return;
         }
         for (HomeItem it : homeItems) if (it.page >= at) it.page++;
-        rebuildGridPages(gridPages.size() + 1, at + 1);
+        if (prefs.defaultPage() >= at) prefs.setDefaultPage(prefs.defaultPage() + 1);
+        rebuildGridPages(gridPages.size() + 1, at);
     }
 
     private void deletePage() {
-        final int g = pager.getCurrentItem() - 1;
-        if (g < 0) return;
+        final int g = pager.getCurrentItem();
         if (gridPages.size() <= 1) {
             Toast.makeText(this, "Can't delete the last page", Toast.LENGTH_SHORT).show();
             return;
@@ -1469,27 +1465,28 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                         }
                     }
                     homeItems = keep;
-                    rebuildGridPages(gridPages.size() - 1, Math.min(g + 1, gridPages.size() - 1));
+                    int def = prefs.defaultPage();
+                    prefs.setDefaultPage(def > g ? def - 1 : def == g ? 0 : def);
+                    rebuildGridPages(gridPages.size() - 1, Math.min(g, gridPages.size() - 2));
                 })
                 .setNegativeButton(R.string.action_cancel, null)
                 .show();
     }
 
     private void movePage(int dir) {
-        int g = pager.getCurrentItem() - 1;
+        int g = pager.getCurrentItem();
         int t = g + dir;
-        if (g < 0 || t < 0 || t >= gridPages.size()) return;
+        if (t < 0 || t >= gridPages.size()) return;
         for (HomeItem it : homeItems) {
             if (it.page == g) it.page = t;
             else if (it.page == t) it.page = g;
         }
-        rebuildGridPages(gridPages.size(), t + 1);
+        rebuildGridPages(gridPages.size(), t);
     }
 
     /** Snaps every item on the page back onto the grid, top-to-bottom and left-to-right. */
     private void tidyPage() {
-        int g = pager.getCurrentItem() - 1;
-        if (g < 0) return;
+        int g = pager.getCurrentItem();
         final int cols = prefs.columns(), rws = prefs.rows();
         final float cw = 1f / cols, rh = 1f / rws;
         List<HomeItem> onPage = new ArrayList<>();
@@ -1519,7 +1516,7 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
                 }
             }
         }
-        rebuildGridPages(gridPages.size(), g + 1);
+        rebuildGridPages(gridPages.size(), g);
         Toast.makeText(this, "Page tidied", Toast.LENGTH_SHORT).show();
     }
 
@@ -1659,18 +1656,17 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if (pager != null) pager.setCurrentItem(Math.min(prefs.defaultPage(), gridPages.size()), false);
+        if (pager != null) pager.setCurrentItem(defaultIndex(), false);
         if (searchInput != null) {
             searchInput.setText("");
-            if (prefs.defaultPage() == Prefs.DEFAULT_PAGE_SEARCH && prefs.autoFocusKeyboard()) focusSearch();
+            if (prefs.autoFocusKeyboard()) focusSearch();
         }
     }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus && prefs.defaultPage() == Prefs.DEFAULT_PAGE_SEARCH && prefs.autoFocusKeyboard()
-                && pager != null && pager.getCurrentItem() == Prefs.DEFAULT_PAGE_SEARCH) {
+        if (hasFocus && prefs.autoFocusKeyboard() && pager != null && pager.getCurrentItem() == defaultIndex()) {
             focusSearch();
         }
     }
@@ -1699,8 +1695,8 @@ public final class MainActivity extends Activity implements AppIndexer.Listener,
             searchInput.setText("");
             return;
         }
-        if (pager != null && pager.getCurrentItem() != Prefs.DEFAULT_PAGE_SEARCH) {
-            pager.setCurrentItem(Prefs.DEFAULT_PAGE_SEARCH, true);
+        if (pager != null && pager.getCurrentItem() != defaultIndex()) {
+            pager.setCurrentItem(defaultIndex(), true);
             return;
         }
         // Home is never "closed" by back — matches standard launcher behaviour.

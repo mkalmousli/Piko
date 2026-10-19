@@ -17,8 +17,6 @@ public final class SetupActivity extends Activity {
 
         ui.hint("A few quick choices. You can change all of them later in Settings.");
         ui.section("Start");
-        ui.toggle("Open on the search page", prefs.defaultPage() == 0,
-                (b, on) -> prefs.setDefaultPage(on ? 0 : 1));
         ui.toggle("Show the keyboard automatically", prefs.autoFocusKeyboard(),
                 (b, on) -> prefs.setAutoFocusKeyboard(on));
 

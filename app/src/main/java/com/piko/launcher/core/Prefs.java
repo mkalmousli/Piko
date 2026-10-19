@@ -23,7 +23,7 @@ public final class Prefs {
 
     private static final String KEY_COLUMNS = "grid_columns";
     private static final String KEY_ROWS = "grid_rows";
-    private static final String KEY_DEFAULT_PAGE = "default_page";
+    private static final String KEY_DEFAULT_PAGE = "default_grid_page";
     private static final String KEY_DIRECT_CALL = "direct_call";
     private static final String KEY_GRID_PAGES = "grid_page_count";
     private static final String KEY_FIRST_RUN = "first_run_done";
@@ -39,8 +39,6 @@ public final class Prefs {
 
     public static final int DEFAULT_COLUMNS = 5;
     public static final int DEFAULT_ROWS = 6;
-    public static final int DEFAULT_PAGE_SEARCH = 0;
-    public static final int DEFAULT_PAGE_HOME = 1;
 
     private final SharedPreferences sp;
 
@@ -72,7 +70,7 @@ public final class Prefs {
     }
 
     public int defaultPage() {
-        return sp.getInt(KEY_DEFAULT_PAGE, DEFAULT_PAGE_SEARCH);
+        return sp.getInt(KEY_DEFAULT_PAGE, 0);
     }
 
     public void setDefaultPage(int page) {
